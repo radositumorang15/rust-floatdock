@@ -1,0 +1,52 @@
+[package]
+name = "float-dock"
+version = "0.1.0"
+description = "Float Dock for Windows 10 and 11"
+authors = ["tamu"]
+edition = "2024"
+default-run = "float-dock"
+
+[lib]
+name = "float_dock_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "float-dock"
+path = "src/main.rs"
+
+[[bin]]
+name = "watchdog"
+path = "src/bin/watchdog.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+sysinfo = "0.33"
+window-vibrancy = "0.8"
+
+[target.'cfg(windows)'.dependencies.windows]
+version = "0.62"
+features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_Graphics_Dwm",
+    "Win32_System_Power",
+    "Win32_System_Threading",
+    "Win32_System_ProcessStatus",
+    "Win32_Security",
+]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

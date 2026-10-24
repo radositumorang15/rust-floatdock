@@ -1,0 +1,30 @@
+{
+  "name": "Liquid Glass",
+  "version": "1.0.0",
+  "author": "FloatDock",
+  "description": "Tema kaca liquid glass Apple dengan specular highlights dan blur elegan.",
+  "accent": "#5B9BFF",
+  "glow": {
+    "enabled": true,
+    "flow": false,
+    "color": "rgba(91, 155, 255, 0.4)"
+  },
+  "liquidGlass": {
+    "enabled": true,
+    "specular": true,
+    "tint": "rgba(45, 65, 95, 0.65)"
+  },
+  "startMenu": {
+    "style": "standard",
+    "cloverMotif": false
+  },
+  "notch": {
+    "eyes": "standard",
+    "eyesStyle": "dots"
+  },
+  "particles": {
+    "enabled": false,
+    "onHover": "none",
+    "type": "none"
+  }
+}

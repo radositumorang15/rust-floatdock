@@ -1,0 +1,43 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Rust target
+/target
+src-tauri/target
+**/target
+
+# Temporary scripts & logs
+test_*.ps1
+check_*.ps1
+get_*.ps1
+debug_*.ps1
+inspect_*.ps1
+unlock_*.ps1
+verify_*.ps1
+run_*.ps1
+list_*.ps1
+*.log
+
+# Root media duplicate (public/asta-demon.mp4 is tracked)
+asta-demon-black-clover*.mp4

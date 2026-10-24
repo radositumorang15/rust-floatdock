@@ -1,0 +1,97 @@
+/* Design Tokens from DESIGN.md */
+:root {
+  /* Segment Tints (DESIGN-v0.2 Grimoire Verdant default) */
+  --tint-start:  rgba(40, 150, 110, 0.55);
+  --tint-apps:   rgba(70, 40, 130, 0.55);
+  --tint-info:   rgba(60, 60, 120, 0.50);
+  --tint-system: rgba(40, 130, 105, 0.55);
+  --tint-notify: rgba(100, 60, 170, 0.60);
+
+  --accent: #7CFFB2;
+  --accent-2: #9B7CFF;
+  --glow: rgba(124, 255, 178, 0.45);
+
+  /* Warna dasar (fallback / menu) */
+  --glass-bg: rgba(70, 40, 130, 0.55);
+  --glass-bg-strong: rgba(18, 28, 46, 0.68);     /* start menu */
+  --glass-border: rgba(255, 255, 255, 0.30);
+  --glass-highlight: rgba(255, 255, 255, 0.55);  /* garis atas specular */
+  --glass-edge-top: rgba(255, 255, 255, 0.55);
+  --glass-edge-bottom: rgba(255, 255, 255, 0.10);
+  --glass-inner-shadow: inset 0 1px 0 var(--glass-edge-top), inset 0 -1px 0 var(--glass-edge-bottom);
+  --glass-shadow: 0 14px 34px rgba(8, 10, 30, 0.38), 0 2px 8px rgba(8, 10, 30, 0.25);
+
+  --surface-chip: rgba(255, 255, 255, 0.20);     /* tombol Start, pill timer, tombol power */
+  --surface-chip-hover: rgba(255, 255, 255, 0.32);
+  --surface-chip-dark: rgba(15, 24, 38, 0.55);   /* tombol Start (kotak gelap) */
+  --input-bg: rgba(255, 255, 255, 0.18);
+  --input-border: rgba(255, 255, 255, 0.45);
+
+  --text-primary: #FFFFFF;
+  --text-secondary: rgba(255, 255, 255, 0.75);
+  --text-placeholder: rgba(255, 255, 255, 0.65);
+  --danger: #FF5A52;
+  --notch-bg: #000000;
+
+  /* Blur */
+  --glass-blur: 26px;
+  --glass-saturate: 1.35;
+  --blur-dock: 26px;
+  --blur-menu: 32px;
+
+  /* Radius (DESIGN-v0.2) */
+  --r-seg: 20px;
+  --r-tile: 16px;
+  --r-dock: 22px;
+  --r-menu: 26px;
+  --r-icon: 13px;      /* squircle ikon */
+  --r-chip: 14px;
+  --r-input: 14px;
+  --r-notch: 0 0 20px 20px;
+
+  /* Spacing (kelipatan 4) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+
+  /* Tipografi */
+  --font: "Inter", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --fs-label: 11px;   /* label ikon start menu */
+  --fs-small: 12px;   /* tanggal, sublabel pill */
+  --fs-body: 13px;    /* input, nama user */
+  --fs-clock: 13px;   /* jam */
+  --fs-pill: 16px;    /* angka timer */
+  --fw-regular: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+
+  /* Gerak halus (fluid spring) */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 160ms;
+  --t-base: 220ms;
+  --t-slow: 300ms;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent !important;
+  background-color: transparent !important;
+  font-family: var(--font);
+  color: var(--text-primary);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}

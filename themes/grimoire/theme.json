@@ -1,0 +1,37 @@
+{
+  "name": "Grimoire",
+  "version": "1.0.0",
+  "author": "FloatDock Community",
+  "description": "Tema orisinal bertema sihir mana elemental dengan partikel mana, lingkar timer mana, dan grimoire shell.",
+  "accent": "#7CFFB2",
+  "manaAttribute": "wind",
+  "glow": {
+    "enabled": true,
+    "flow": true,
+    "color": "#7CFFB2"
+  },
+  "liquidGlass": {
+    "enabled": true,
+    "specular": true,
+    "tint": "rgba(20, 42, 32, 0.75)"
+  },
+  "wallpaper": "wall.jpg",
+  "startMenu": {
+    "style": "pages",
+    "cloverMotif": true
+  },
+  "notch": {
+    "eyes": "custom",
+    "eyesStyle": "mana-spark"
+  },
+  "particles": {
+    "enabled": true,
+    "onHover": "mana",
+    "type": "mana"
+  },
+  "iconOverrides": {
+    "explorer": "grimoire-scroll",
+    "notes": "magic-quill",
+    "music": "mana-harp"
+  }
+}
