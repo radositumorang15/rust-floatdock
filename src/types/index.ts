@@ -3,8 +3,11 @@ export interface TrackedWindow {
   title: string;
   process_id: number;
   app_name: string;
+  exec_path?: string;
+  icon_url?: string;
   is_active: boolean;
   is_minimized: boolean;
+  profile_name?: string;
 }
 
 export interface AppEntry {
@@ -12,6 +15,7 @@ export interface AppEntry {
   name: string;
   exec_path: string;
   icon_name: string;
+  icon_url?: string;
   is_pinned: boolean;
   category: string;
 }
@@ -81,4 +85,46 @@ export interface ContextMenuState {
   y: number;
   visible: boolean;
   items: ContextMenuItem[];
+}
+
+export interface SystemPulse {
+  cursor_norm_x: number;
+  cursor_norm_y: number;
+  cpu_usage: number;
+  ram_usage: number;
+  should_autohide_dock: boolean;
+  cursor_near_bottom: boolean;
+  recent_clips: string[];
+}
+
+export interface HardwareAudioState {
+  audio_bars: number[];
+  battery_percent: number;
+  is_charging: boolean;
+  hardware_toast?: string | null;
+}
+
+export interface WindowInstance {
+  hwnd: number;
+  title: string;
+  is_minimized: boolean;
+  profile_name?: string;
+}
+
+export interface ChromeProfileEntry {
+  dir: string;
+  name: string;
+}
+
+export interface ShelfFile {
+  name: string;
+  path: string;
+}
+
+export interface GroupedDockApp {
+  group_id: string;
+  app_name: string;
+  profile_badge?: string;
+  is_pinned: boolean;
+  windows: WindowInstance[];
 }

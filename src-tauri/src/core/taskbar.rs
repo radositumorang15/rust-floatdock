@@ -10,10 +10,14 @@ use windows::core::w;
 use windows::Win32::Foundation::HWND;
 #[cfg(windows)]
 use windows::Win32::UI::WindowsAndMessaging::{
-    FindWindowW, ShowWindow, SW_HIDE, SW_SHOW,
+    FindWindowW, IsWindowVisible, ShowWindow, SW_HIDE, SW_SHOW,
 };
 
 static TASKBAR_HIDDEN: AtomicBool = AtomicBool::new(false);
+
+pub fn is_taskbar_hidden() -> bool {
+    TASKBAR_HIDDEN.load(Ordering::SeqCst)
+}
 
 /// Hides the default Windows taskbar (primary and secondary monitors).
 pub fn hide_taskbar() {
@@ -31,6 +35,26 @@ pub fn hide_taskbar() {
         }
         TASKBAR_HIDDEN.store(true, Ordering::SeqCst);
         println!("[Taskbar] Windows Taskbar hidden.");
+    }
+}
+
+/// Continuously ensures the Windows taskbar stays hidden if TASKBAR_HIDDEN is true.
+/// This prevents Windows 11 Explorer from restoring the taskbar when settings or other windows gain focus.
+pub fn ensure_taskbar_hidden() {
+    #[cfg(windows)]
+    if is_taskbar_hidden() {
+        unsafe {
+            if let Ok(hwnd) = FindWindowW(w!("Shell_TrayWnd"), None) {
+                if hwnd != HWND(std::ptr::null_mut()) && IsWindowVisible(hwnd).as_bool() {
+                    let _ = ShowWindow(hwnd, SW_HIDE);
+                }
+            }
+            if let Ok(sec_hwnd) = FindWindowW(w!("Shell_SecondaryTrayWnd"), None) {
+                if sec_hwnd != HWND(std::ptr::null_mut()) && IsWindowVisible(sec_hwnd).as_bool() {
+                    let _ = ShowWindow(sec_hwnd, SW_HIDE);
+                }
+            }
+        }
     }
 }
 

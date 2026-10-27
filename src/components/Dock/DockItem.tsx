@@ -118,6 +118,35 @@ const DockItemComponent: React.FC<DockItemProps> = ({
           />
         </div>
 
+        {/* Profile Avatar Badge */}
+        {runningWindow?.profile_name && (
+          <div
+            title={`Profil: ${runningWindow.profile_name}`}
+            style={{
+              position: 'absolute',
+              top: '2px',
+              right: '2px',
+              minWidth: '14px',
+              height: '14px',
+              padding: '0 3px',
+              borderRadius: '7px',
+              background: accentColor,
+              color: '#090D16',
+              fontSize: '9px',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 3,
+              boxShadow: '0 2px 5px rgba(0,0,0,0.4)',
+              border: '1px solid rgba(255,255,255,0.6)',
+              lineHeight: 1,
+            }}
+          >
+            {runningWindow.profile_name.slice(0, 1).toUpperCase()}
+          </div>
+        )}
+
         {/* Indicators below icon (DESIGN-v0.2) */}
         {isActive ? (
           <div className="app-active-indicator-pill" style={{ background: accentColor, boxShadow: `0 0 8px ${accentColor}` }} />

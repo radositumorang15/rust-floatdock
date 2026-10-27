@@ -6,7 +6,6 @@ pub mod windows;
 use std::time::Duration;
 use tauri::{Emitter, Manager};
 
-use crate::core::appbar::unregister_dock_appbar;
 use crate::core::taskbar::{hide_taskbar, restore_taskbar, spawn_watchdog};
 use crate::ipc::commands::*;
 use crate::services::timer::tick_timer;
@@ -17,6 +16,11 @@ use crate::windows::start_menu::setup_start_menu_window;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Force WebView2 transparent background
+    unsafe {
+        std::env::set_var("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "0");
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
@@ -44,8 +48,20 @@ pub fn run() {
             search_start_apps,
             toggle_media_playback,
             resize_notch,
+            resize_dock,
             toggle_taskbar_visibility,
-            broadcast_theme
+            broadcast_theme,
+            execute_omnibox_command,
+            open_quick_folder,
+            get_grouped_dock_apps,
+            get_native_app_icon,
+            open_shelf_file,
+            reveal_shelf_file,
+            optimize_system_memory,
+            media_skip_next,
+            media_skip_previous,
+            get_available_chrome_profiles,
+            launch_chrome_profile
         ])
         .setup(|app| {
             // Spawn watchdog process to guarantee taskbar restoration if process terminates
@@ -85,15 +101,34 @@ pub fn run() {
                 }
             });
 
+            // Spawn background telemetry & hardware audio monitor (every 80ms)
+            let pulse_handle = app.handle().clone();
+            let dock_hwnd_val = app
+                .get_webview_window("dock")
+                .and_then(|w| w.hwnd().ok())
+                .map(|h| h.0 as isize)
+                .unwrap_or(0);
+
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    tokio::time::sleep(Duration::from_millis(80)).await;
+                    #[cfg(windows)]
+                    {
+                        crate::core::taskbar::ensure_taskbar_hidden();
+                        let pulse = crate::services::telemetry::get_system_pulse(dock_hwnd_val);
+                        let _ = pulse_handle.emit("system-pulse", pulse);
+
+                        let hw = crate::services::hardware_audio::poll_hardware_and_audio();
+                        let _ = pulse_handle.emit("hardware-audio", hw);
+                    }
+                }
+            });
+
             Ok(())
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::Destroyed = event {
                 if window.label() == "dock" {
-                    #[cfg(windows)]
-                    if let Ok(hwnd) = window.hwnd() {
-                        unregister_dock_appbar(hwnd.0 as isize);
-                    }
                     restore_taskbar();
                 }
             }

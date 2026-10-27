@@ -2,37 +2,28 @@
 #![windows_subsystem = "windows"]
 
 fn main() {
-    #[cfg(windows)]
+    // Force WebView2 to use 0 (fully transparent) default background color
     unsafe {
-        use windows::Win32::Foundation::{GetLastError, ERROR_ALREADY_EXISTS};
-        use windows::Win32::System::Threading::CreateMutexW;
-        use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONINFORMATION, MB_OK, FindWindowW, SetForegroundWindow};
-        use windows::core::w;
-        use std::ffi::OsStr;
-        use std::os::windows::ffi::OsStrExt;
+        std::env::set_var("WEBVIEW2_DEFAULT_BACKGROUND_COLOR", "0");
+    }
 
-        let _mutex = CreateMutexW(None, true, w!("Global\\FloatDock_SingleInstance_Mutex"));
-        if GetLastError() == ERROR_ALREADY_EXISTS {
+    #[cfg(windows)]
+    let _instance_mutex = unsafe {
+        use windows::Win32::Foundation::{GetLastError, SetLastError, ERROR_ALREADY_EXISTS, WIN32_ERROR};
+        use windows::Win32::System::Threading::CreateMutexW;
+        use windows::Win32::UI::WindowsAndMessaging::{FindWindowW, SetForegroundWindow};
+        use windows::core::w;
+
+        SetLastError(WIN32_ERROR(0));
+        let handle = CreateMutexW(None, true, w!("Local\\FloatDock_SingleInstance_Mutex"));
+        if handle.is_ok() && GetLastError() == ERROR_ALREADY_EXISTS {
             if let Ok(hwnd) = FindWindowW(None, w!("Float Dock")) {
                 let _ = SetForegroundWindow(hwnd);
             }
-            let wide_msg: Vec<u16> = OsStr::new("Float Dock sudah berjalan di desktop Anda.")
-                .encode_wide()
-                .chain(std::iter::once(0))
-                .collect();
-            let wide_title: Vec<u16> = OsStr::new("Float Dock")
-                .encode_wide()
-                .chain(std::iter::once(0))
-                .collect();
-            let _ = MessageBoxW(
-                None,
-                windows::core::PCWSTR(wide_msg.as_ptr()),
-                windows::core::PCWSTR(wide_title.as_ptr()),
-                MB_ICONINFORMATION | MB_OK,
-            );
             return;
         }
-    }
+        handle
+    };
 
     std::panic::set_hook(Box::new(|info| {
         let msg = format!("Float Dock Panic:\n{}", info);

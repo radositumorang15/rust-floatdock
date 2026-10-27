@@ -51,12 +51,26 @@ export const AppTile: React.FC<AppTileProps> = ({ app, theme, onClick }) => {
           transition: 'transform var(--t-fast) var(--ease-out)',
         }}
       >
-        <AppIconRenderer
-          iconName={app.icon_name}
-          size={40}
-          theme={theme}
-          parallaxY={hovered ? -1.5 : 0}
-        />
+        {app.icon_url ? (
+          <img
+            src={app.icon_url}
+            alt={app.name}
+            style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '8px',
+              objectFit: 'contain',
+              filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+            }}
+          />
+        ) : (
+          <AppIconRenderer
+            iconName={app.icon_name}
+            size={40}
+            theme={theme}
+            parallaxY={hovered ? -1.5 : 0}
+          />
+        )}
       </div>
       <span
         style={{

@@ -4,13 +4,10 @@
 use tauri::{AppHandle, Manager, WebviewWindow};
 
 #[cfg(windows)]
-use windows::Win32::Foundation::HWND;
-#[cfg(windows)]
-use windows::Win32::Graphics::Dwm::DwmExtendFrameIntoClientArea;
-#[cfg(windows)]
-use windows::Win32::UI::Controls::MARGINS;
-#[cfg(windows)]
 use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSCREEN, SM_CYSCREEN};
+
+#[cfg(windows)]
+use super::{make_hwnd_transparent, strip_window_decorations};
 
 use super::dock::{DOCK_BAR_HEIGHT, DOCK_BOTTOM_OFFSET};
 
@@ -19,31 +16,18 @@ pub const START_MENU_HEIGHT: f64 = 480.0;
 pub const GAP_ABOVE_DOCK: f64 = 10.0;
 
 pub fn setup_start_menu_window(window: &WebviewWindow) {
+    let _ = window.set_title("");
+    let _ = window.set_decorations(false);
     let _ = window.set_always_on_top(true);
     let _ = window.set_shadow(false);
 
     #[cfg(windows)]
     {
+        strip_window_decorations(window);
         make_hwnd_transparent(window);
     }
 
     reposition_start_menu(window);
-}
-
-#[cfg(windows)]
-fn make_hwnd_transparent(window: &WebviewWindow) {
-    if let Ok(hwnd) = window.hwnd() {
-        let hwnd = HWND(hwnd.0);
-        unsafe {
-            let margins = MARGINS {
-                cxLeftWidth: -1,
-                cxRightWidth: -1,
-                cyTopHeight: -1,
-                cyBottomHeight: -1,
-            };
-            let _ = DwmExtendFrameIntoClientArea(hwnd, &margins);
-        }
-    }
 }
 
 pub fn reposition_start_menu(window: &WebviewWindow) {

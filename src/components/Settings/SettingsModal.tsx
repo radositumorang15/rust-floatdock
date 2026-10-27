@@ -20,7 +20,9 @@ export const SettingsModal: React.FC<SettingsProps> = ({
 }) => {
   const [iconSize, setIconSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [magnification, setMagnification] = useState(true);
-  const [autoHide, setAutoHide] = useState(false);
+  const [autoHide, setAutoHide] = useState(() => {
+    return localStorage.getItem('floatdock_autohide') === 'true';
+  });
   const [taskbarHidden, setTaskbarHidden] = useState(true);
   const [videoBg, setVideoBg] = useState(() => {
     return localStorage.getItem('dock_video_bg') !== 'false';
@@ -276,7 +278,12 @@ export const SettingsModal: React.FC<SettingsProps> = ({
             <input
               type="checkbox"
               checked={autoHide}
-              onChange={(e) => setAutoHide(e.target.checked)}
+              onChange={(e) => {
+                const val = e.target.checked;
+                setAutoHide(val);
+                localStorage.setItem('floatdock_autohide', String(val));
+                window.dispatchEvent(new Event('storage'));
+              }}
               style={{ width: '18px', height: '18px', cursor: 'pointer' }}
             />
           </div>

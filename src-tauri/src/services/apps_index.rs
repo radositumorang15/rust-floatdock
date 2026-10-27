@@ -1,5 +1,5 @@
 //! Start Menu and Installed Applications Indexer
-//! Scans Windows shortcuts and provides default matching pinned applications.
+//! Scans Windows taskbar pinned shortcuts and Start Menu programs.
 
 use serde::{Deserialize, Serialize};
 use std::env;
@@ -12,81 +12,165 @@ pub struct AppEntry {
     pub name: String,
     pub exec_path: String,
     pub icon_name: String,
+    pub icon_url: Option<String>,
     pub is_pinned: bool,
     pub category: String,
 }
 
+pub fn resolve_icon_name(name: &str) -> String {
+    let lower = name.to_lowercase();
+    if lower.contains("explorer") {
+        "explorer".to_string()
+    } else if lower.contains("chrome") {
+        "chrome".to_string()
+    } else if lower.contains("antigravity") {
+        "antigravity".to_string()
+    } else if lower.contains("visual studio code") || lower.contains("vscode") || lower == "code" {
+        "vscode".to_string()
+    } else if lower.contains("figma") {
+        "figma".to_string()
+    } else if lower.contains("comet") {
+        "comet".to_string()
+    } else if lower.contains("pureref") {
+        "pureref".to_string()
+    } else if lower.contains("illustrator") {
+        "illustrator".to_string()
+    } else if lower.contains("creative cloud") {
+        "creativecloud".to_string()
+    } else if lower.contains("cursor") {
+        "cursor".to_string()
+    } else if lower.contains("github") {
+        "github".to_string()
+    } else if lower.contains("telegram") {
+        "telegram".to_string()
+    } else if lower.contains("terminal") || lower.contains("cmd") || lower.contains("powershell") {
+        "terminal".to_string()
+    } else if lower.contains("store") {
+        "store".to_string()
+    } else if lower.contains("setting") || lower.contains("pengaturan") {
+        "settings".to_string()
+    } else if lower.contains("brave") {
+        "brave".to_string()
+    } else if lower.contains("edge") {
+        "edge".to_string()
+    } else if lower.contains("whatsapp") {
+        "whatsapp".to_string()
+    } else if lower.contains("discord") {
+        "discord".to_string()
+    } else if lower.contains("music") || lower.contains("spotify") {
+        "music".to_string()
+    } else if lower.contains("word") {
+        "word".to_string()
+    } else if lower.contains("powerpoint") {
+        "powerpoint".to_string()
+    } else if lower.contains("gemini") {
+        "gemini".to_string()
+    } else if lower.contains("chatgpt") {
+        "chatgpt".to_string()
+    } else if lower.contains("snipping") || lower.contains("snip") {
+        "snipping_tool".to_string()
+    } else if lower.contains("calc") || lower.contains("kalkulator") {
+        "calc".to_string()
+    } else if lower.contains("notepad") || lower.contains("catatan") {
+        "notepad".to_string()
+    } else if lower.contains("paint") {
+        "paint".to_string()
+    } else if lower.contains("camera") || lower.contains("kamera") {
+        "camera".to_string()
+    } else if lower.contains("copilot") {
+        "copilot".to_string()
+    } else {
+        "default".to_string()
+    }
+}
+
+/// Reads pinned shortcuts directly from Windows Taskbar folder
+pub fn get_windows_pinned_shortcuts() -> Vec<PathBuf> {
+    let mut pinned = Vec::new();
+    if let Ok(appdata) = env::var("APPDATA") {
+        let dir = PathBuf::from(appdata)
+            .join("Microsoft\\Internet Explorer\\Quick Launch\\User Pinned\\TaskBar");
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|s| s.eq_ignore_ascii_case("lnk"))
+                    == Some(true)
+                {
+                    pinned.push(path);
+                }
+            }
+        }
+    }
+    pinned
+}
+
 pub fn get_default_dock_apps() -> Vec<AppEntry> {
+    let shortcuts = get_windows_pinned_shortcuts();
+    if !shortcuts.is_empty() {
+        let mut apps = Vec::new();
+        for shortcut in shortcuts {
+            if let Some(stem) = shortcut.file_stem().and_then(|s| s.to_str()) {
+                let id = stem.to_lowercase().replace(' ', "_");
+                let icon_name = resolve_icon_name(stem);
+                let shortcut_str = shortcut.to_string_lossy().to_string();
+                let icon_url = crate::core::icon_extractor::extract_icon_base64(&shortcut_str, 48);
+                apps.push(AppEntry {
+                    id,
+                    name: stem.to_string(),
+                    exec_path: shortcut_str,
+                    icon_name,
+                    icon_url,
+                    is_pinned: true,
+                    category: "Pinned".to_string(),
+                });
+            }
+        }
+
+        // Ensure Pengaturan (Settings) is always available at the end
+        if !apps.iter().any(|a| a.id == "settings" || a.icon_name == "settings") {
+            apps.push(AppEntry {
+                id: "settings".to_string(),
+                name: "Pengaturan".to_string(),
+                exec_path: "ms-settings:".to_string(),
+                icon_name: "settings".to_string(),
+                icon_url: None,
+                is_pinned: true,
+                category: "System".to_string(),
+            });
+        }
+
+        return apps;
+    }
+
+    // Default curated fallback apps if TaskBar folder is not accessible
     vec![
         AppEntry {
             id: "explorer".to_string(),
             name: "File Explorer".to_string(),
             exec_path: "explorer.exe".to_string(),
             icon_name: "explorer".to_string(),
+            icon_url: crate::core::icon_extractor::extract_icon_base64("explorer.exe", 48),
             is_pinned: true,
             category: "System".to_string(),
         },
         AppEntry {
-            id: "store".to_string(),
-            name: "Microsoft Store".to_string(),
-            exec_path: "ms-windows-store:".to_string(),
-            icon_name: "store".to_string(),
+            id: "chrome".to_string(),
+            name: "Google Chrome".to_string(),
+            exec_path: "chrome.exe".to_string(),
+            icon_name: "chrome".to_string(),
+            icon_url: crate::core::icon_extractor::extract_icon_base64("chrome.exe", 48),
             is_pinned: true,
-            category: "System".to_string(),
-        },
-        AppEntry {
-            id: "pureref".to_string(),
-            name: "PureRef".to_string(),
-            exec_path: "PureRef.exe".to_string(),
-            icon_name: "pureref".to_string(),
-            is_pinned: true,
-            category: "Design".to_string(),
-        },
-        AppEntry {
-            id: "creativecloud".to_string(),
-            name: "Creative Cloud".to_string(),
-            exec_path: r"C:\Program Files\Adobe\Adobe Creative Cloud\ACC\Creative Cloud.exe".to_string(),
-            icon_name: "creativecloud".to_string(),
-            is_pinned: true,
-            category: "Design".to_string(),
-        },
-        AppEntry {
-            id: "illustrator".to_string(),
-            name: "Adobe Illustrator".to_string(),
-            exec_path: r"C:\Program Files\Adobe\Adobe Illustrator 2026\Support Files\Contents\Windows\Illustrator.exe".to_string(),
-            icon_name: "illustrator".to_string(),
-            is_pinned: true,
-            category: "Design".to_string(),
-        },
-        AppEntry {
-            id: "cursor".to_string(),
-            name: "Cursor".to_string(),
-            exec_path: r"C:\Users\tamu\AppData\Local\Programs\cursor\Cursor.exe".to_string(),
-            icon_name: "cursor".to_string(),
-            is_pinned: true,
-            category: "Development".to_string(),
-        },
-        AppEntry {
-            id: "github".to_string(),
-            name: "GitHub Desktop".to_string(),
-            exec_path: r"C:\Users\tamu\AppData\Local\GitHubDesktop\GitHubDesktop.exe".to_string(),
-            icon_name: "github".to_string(),
-            is_pinned: true,
-            category: "Development".to_string(),
-        },
-        AppEntry {
-            id: "telegram".to_string(),
-            name: "Telegram".to_string(),
-            exec_path: "telegram.exe".to_string(),
-            icon_name: "telegram".to_string(),
-            is_pinned: true,
-            category: "Communication".to_string(),
+            category: "Browser".to_string(),
         },
         AppEntry {
             id: "antigravity".to_string(),
             name: "Antigravity IDE".to_string(),
             exec_path: r"D:\Antigravity IDE\Antigravity IDE.exe".to_string(),
             icon_name: "antigravity".to_string(),
+            icon_url: crate::core::icon_extractor::extract_icon_base64(r"D:\Antigravity IDE\Antigravity IDE.exe", 48),
             is_pinned: true,
             category: "Development".to_string(),
         },
@@ -95,22 +179,16 @@ pub fn get_default_dock_apps() -> Vec<AppEntry> {
             name: "Terminal".to_string(),
             exec_path: "wt.exe".to_string(),
             icon_name: "terminal".to_string(),
+            icon_url: crate::core::icon_extractor::extract_icon_base64("wt.exe", 48),
             is_pinned: true,
             category: "System".to_string(),
-        },
-        AppEntry {
-            id: "chrome".to_string(),
-            name: "Google Chrome".to_string(),
-            exec_path: r"C:\Program Files\Google\Chrome\Application\chrome.exe".to_string(),
-            icon_name: "chrome".to_string(),
-            is_pinned: true,
-            category: "Browser".to_string(),
         },
         AppEntry {
             id: "settings".to_string(),
             name: "Pengaturan".to_string(),
             exec_path: "ms-settings:".to_string(),
             icon_name: "settings".to_string(),
+            icon_url: None,
             is_pinned: true,
             category: "System".to_string(),
         },
@@ -131,11 +209,15 @@ fn scan_shortcuts(dir: &Path, list: &mut Vec<AppEntry>) {
                         .map(|s| s.to_string_lossy().to_string())
                         .unwrap_or_default();
                     if !file_stem.is_empty() {
+                        let icon_name = resolve_icon_name(&file_stem);
+                        let path_str = path.to_string_lossy().to_string();
+                        let icon_url = crate::core::icon_extractor::extract_icon_base64(&path_str, 48);
                         list.push(AppEntry {
                             id: format!("lnk_{}", file_stem),
                             name: file_stem.clone(),
-                            exec_path: path.to_string_lossy().to_string(),
-                            icon_name: "default".to_string(),
+                            exec_path: path_str,
+                            icon_name,
+                            icon_url,
                             is_pinned: false,
                             category: "Applications".to_string(),
                         });

@@ -36,6 +36,17 @@
   }
 }
 
+@keyframes pulse {
+  0% {
+    transform: scaleY(0.35);
+    opacity: 0.65;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
 /* Custom scrollbar for start menu grid */
 ::-webkit-scrollbar {
   width: 4px;

@@ -1,15 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Search, LayoutGrid, Bell } from 'lucide-react';
-import { AppEntry, FullDockState, TrackedWindow, ContextMenuState, ContextMenuItem } from '../../types';
+import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
+import { AppEntry, FullDockState, TrackedWindow, ContextMenuState, ContextMenuItem, SystemPulse, WindowInstance } from '../../types';
 import { Windows11Logo, TelegramIcon } from '../common/AppIcons';
 import { GeometricClover } from '../common/CloverIcon';
 import { ManaParticles } from '../common/ManaParticles';
 import { ThemeConfig, ManaAttribute } from '../../themes/types';
 import { AVAILABLE_THEMES } from '../../themes/presets';
-import { DockItem } from './DockItem';
 import { Pill } from './Pill';
 import { TrayArea } from './TrayIcon';
 import { ContextMenu } from '../common/ContextMenu';
+import { SortableDockList, DockItemData } from './SortableDockList';
 
 interface DockProps {
   state: FullDockState;
@@ -103,12 +105,213 @@ export const Dock: React.FC<DockProps> = ({
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
+  // Smart Intellihide & Telemetry state with local hover protection and smooth grace period
+  const [pulse, setPulse] = useState<SystemPulse | null>(null);
+  const [isDockHovered, setIsDockHovered] = useState(false);
+  const hideTimerRef = useRef<number | null>(null);
+  const [debouncedHidden, setDebouncedHidden] = useState(false);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    listen<SystemPulse>('system-pulse', (event) => {
+      setPulse(event.payload);
+    }).then((unsub) => {
+      unlisten = unsub;
+    }).catch(() => {});
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
+
+  const [autoHideEnabled, setAutoHideEnabled] = useState<boolean>(() => {
+    return localStorage.getItem('floatdock_autohide') === 'true';
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      setAutoHideEnabled(localStorage.getItem('floatdock_autohide') === 'true');
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const shouldHide = Boolean(
+    autoHideEnabled && pulse?.should_autohide_dock && !pulse?.cursor_near_bottom && !isDockHovered
+  );
+
+  useEffect(() => {
+    if (!shouldHide) {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      setDebouncedHidden(false);
+    } else {
+      if (!hideTimerRef.current) {
+        hideTimerRef.current = window.setTimeout(() => {
+          setDebouncedHidden(true);
+          hideTimerRef.current = null;
+        }, 500); // 500ms delay so moving cursor to tab or icons never hides
+      }
+    }
+    return () => {
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+      }
+    };
+  }, [shouldHide]);
+
+  // Convert pinned_apps & running_windows into SortableDockList items with multi-window tracking
+  const dockItems: DockItemData[] = useMemo(() => {
+    const list: DockItemData[] = [];
+    const assignedHwnds = new Set<number>();
+
+    // 1. Pinned Apps
+    state.pinned_apps.forEach((app) => {
+      const isPinnedChrome =
+        app.id === 'chrome' ||
+        app.name.toLowerCase().includes('chrome') ||
+        app.exec_path.toLowerCase().includes('chrome.exe');
+
+      const matchingWins: WindowInstance[] = state.running_windows
+        .filter((w) => {
+          if (assignedHwnds.has(w.hwnd)) return false;
+
+          // If pinned Chrome: match any window belonging to Chrome
+          if (isPinnedChrome) {
+            const isWinChrome =
+              w.app_name.toLowerCase().includes('chrome') ||
+              w.title.toLowerCase().includes('google chrome') ||
+              (w.exec_path && w.exec_path.toLowerCase().includes('chrome.exe'));
+
+            return Boolean(isWinChrome);
+          }
+
+          return (
+            w.app_name.toLowerCase().includes(app.name.toLowerCase()) ||
+            app.exec_path.toLowerCase().includes(w.app_name.toLowerCase()) ||
+            w.title.toLowerCase().includes(app.name.toLowerCase())
+          );
+        })
+        .map((w) => {
+          assignedHwnds.add(w.hwnd);
+          return {
+            hwnd: w.hwnd,
+            title: w.title,
+            is_minimized: w.is_minimized,
+            profile_name: w.profile_name,
+          };
+        });
+
+      list.push({
+        id: app.id,
+        name: app.name,
+        execPath: app.exec_path,
+        iconName: app.icon_name,
+        iconUrl: app.icon_url,
+        isPinned: true,
+        windows: matchingWins,
+      });
+    });
+
+    // 2. Unpinned Running Windows (group by app or Chrome profile)
+    const groupedRunning = new Map<string, {
+      id: string;
+      name: string;
+      execPath: string;
+      iconName: string;
+      iconUrl?: string;
+      profileBadge?: string;
+      windows: WindowInstance[];
+    }>();
+
+    state.running_windows.forEach((win) => {
+      if (assignedHwnds.has(win.hwnd)) return;
+
+      const isWinChrome =
+        win.app_name.toLowerCase().includes('chrome') ||
+        win.title.toLowerCase().includes('google chrome') ||
+        (win.exec_path && win.exec_path.toLowerCase().includes('chrome.exe'));
+
+      let groupKey: string;
+      let displayName: string;
+      let iconName = 'default';
+      let profileBadge: string | undefined = undefined;
+
+      if (isWinChrome && win.profile_name) {
+        groupKey = `chrome_profile_${win.profile_name.toLowerCase()}`;
+        displayName = `Chrome (${win.profile_name})`;
+        profileBadge = win.profile_name;
+        iconName = 'chrome';
+      } else {
+        const lowerName = (win.app_name + ' ' + win.title).toLowerCase();
+        if (lowerName.includes('gemini')) { iconName = 'gemini'; displayName = 'Gemini'; }
+        else if (lowerName.includes('chatgpt')) { iconName = 'chatgpt'; displayName = 'ChatGPT'; }
+        else if (lowerName.includes('snipping') || lowerName.includes('snip')) { iconName = 'snipping_tool'; displayName = 'Snipping Tool'; }
+        else if (lowerName.includes('calc')) { iconName = 'calc'; displayName = 'Calculator'; }
+        else if (lowerName.includes('chrome')) { iconName = 'chrome'; displayName = 'Google Chrome'; }
+        else if (lowerName.includes('code') || lowerName.includes('vscode')) { iconName = 'vscode'; displayName = 'VS Code'; }
+        else if (lowerName.includes('antigravity')) { iconName = 'antigravity'; displayName = 'Antigravity IDE'; }
+        else if (lowerName.includes('spotify') || lowerName.includes('music')) { iconName = 'music'; displayName = 'Spotify'; }
+        else if (lowerName.includes('discord')) { iconName = 'discord'; displayName = 'Discord'; }
+        else if (lowerName.includes('telegram')) { iconName = 'telegram'; displayName = 'Telegram'; }
+        else if (lowerName.includes('brave')) { iconName = 'brave'; displayName = 'Brave'; }
+        else if (lowerName.includes('edge')) { iconName = 'edge'; displayName = 'Microsoft Edge'; }
+        else if (lowerName.includes('terminal') || lowerName.includes('cmd') || lowerName.includes('wt')) { iconName = 'terminal'; displayName = 'Terminal'; }
+        else {
+          displayName = win.app_name.replace('.exe', '');
+        }
+        groupKey = `app_${displayName.toLowerCase()}`;
+      }
+
+      if (!groupedRunning.has(groupKey)) {
+        groupedRunning.set(groupKey, {
+          id: `running_${groupKey}`,
+          name: displayName,
+          execPath: win.exec_path || '',
+          iconName,
+          iconUrl: win.icon_url,
+          profileBadge,
+          windows: [],
+        });
+      }
+
+      groupedRunning.get(groupKey)!.windows.push({
+        hwnd: win.hwnd,
+        title: win.title,
+        is_minimized: win.is_minimized,
+        profile_name: win.profile_name,
+      });
+      assignedHwnds.add(win.hwnd);
+    });
+
+    groupedRunning.forEach((item) => {
+      list.push({
+        id: item.id,
+        name: item.name,
+        execPath: item.execPath,
+        iconName: item.iconName,
+        iconUrl: item.iconUrl,
+        profileBadge: item.profileBadge,
+        isPinned: false,
+        windows: item.windows,
+      });
+    });
+
+    return list;
+  }, [state.pinned_apps, state.running_windows]);
+
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     x: 0,
     y: 0,
     visible: false,
     items: [],
   });
+
+  useEffect(() => {
+    invoke('resize_dock', { expanded: false, hidden: debouncedHidden }).catch(() => {});
+  }, [debouncedHidden]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (iconStripRef.current) {
@@ -221,6 +424,13 @@ export const Dock: React.FC<DockProps> = ({
           action: () => onLaunchAdmin(app.exec_path),
         }
       );
+
+      if (app.exec_path && app.exec_path.length > 3) {
+        items.push({
+          label: '📂 Buka Lokasi File',
+          action: () => invoke('reveal_shelf_file', { path: app.exec_path }).catch(() => {}),
+        });
+      }
     }
 
     if (running) {
@@ -259,14 +469,6 @@ export const Dock: React.FC<DockProps> = ({
     });
   };
 
-  const getRunningWindowForApp = (app: AppEntry): TrackedWindow | undefined => {
-    return state.running_windows.find(
-      (w) =>
-        w.app_name.toLowerCase().includes(app.name.toLowerCase()) ||
-        app.exec_path.toLowerCase().includes(w.app_name.toLowerCase())
-    );
-  };
-
   const accentColor = theme?.accent || 'var(--accent)';
   const isGrimoire = theme?.id === 'grimoire' || theme?.id === 'grimoire-verdant';
   const isLight = theme?.mode === 'light';
@@ -279,7 +481,16 @@ export const Dock: React.FC<DockProps> = ({
   const tintNotify = theme?.tints?.notify || 'var(--tint-notify)';
 
   return (
-    <div className="segmented-dock-container">
+    <div
+      className="segmented-dock-container"
+      onMouseEnter={() => setIsDockHovered(true)}
+      onMouseLeave={() => setIsDockHovered(false)}
+      style={{
+        transform: debouncedHidden ? 'translateY(84px)' : 'translateY(0)',
+        transition: 'transform 320ms cubic-bezier(0.16, 1, 0.3, 1), opacity 240ms ease',
+        opacity: debouncedHidden ? 0 : 1,
+      }}
+    >
       {/* ========================================================
           SEGMENT 1: START BUTTON TILE (52x52)
           ======================================================== */}
@@ -374,7 +585,7 @@ export const Dock: React.FC<DockProps> = ({
           />
         )}
 
-        {/* 1. App Icons Strip */}
+        {/* 1. App Icons Strip with Drag-and-Drop Reorder & Multi-Window Previews */}
         <div
           ref={iconStripRef}
           onMouseMove={handleMouseMove}
@@ -385,22 +596,46 @@ export const Dock: React.FC<DockProps> = ({
             position: 'relative',
           }}
         >
-          {state.pinned_apps.map((app, idx) => {
-            const running = getRunningWindowForApp(app);
-            return (
-              <DockItem
-                key={app.id}
-                app={app}
-                runningWindow={running}
-                index={idx}
-                mouseRelativeX={mouseRelativeX}
-                accentColor={accentColor}
-                theme={theme}
-                onClick={onLaunchApp}
-                onContextMenu={handleItemContextMenu}
-              />
-            );
-          })}
+          <SortableDockList
+            items={dockItems}
+            theme={theme}
+            accentColor={accentColor}
+            onFocusWindow={(hwnd) => invoke('focus_window', { hwnd }).catch(() => {})}
+            onCloseWindow={(hwnd) => onCloseWindow(hwnd)}
+            onLaunchApp={(item) =>
+              onLaunchApp({
+                id: item.id,
+                name: item.name,
+                exec_path: item.execPath,
+                icon_name: item.iconName,
+                is_pinned: item.isPinned,
+                category: 'Applications',
+              })
+            }
+            onContextMenu={(e, item) =>
+              handleItemContextMenu(
+                e,
+                {
+                  id: item.id,
+                  name: item.name,
+                  exec_path: item.execPath,
+                  icon_name: item.iconName,
+                  is_pinned: item.isPinned,
+                  category: 'Applications',
+                },
+                item.windows[0]
+                  ? ({
+                      hwnd: item.windows[0].hwnd,
+                      title: item.windows[0].title,
+                      process_id: 0,
+                      app_name: item.name,
+                      is_active: false,
+                      is_minimized: item.windows[0].is_minimized,
+                    } as TrackedWindow)
+                  : undefined
+              )
+            }
+          />
         </div>
 
         {/* 2. Thin Glass Divider */}
@@ -465,8 +700,8 @@ export const Dock: React.FC<DockProps> = ({
           </div>
         </div>
 
-        {/* Sleek Timer Pill (Only shown when timer is running) */}
-        {state.timer && state.timer.is_running && (
+        {/* Sleek Timer Pill (Shown when timer is running or finished) */}
+        {state.timer && (state.timer.is_running || state.timer.is_finished) && (
           <div style={{ marginLeft: '4px' }}>
             <Pill
               timer={state.timer}

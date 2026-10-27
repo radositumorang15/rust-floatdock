@@ -5,29 +5,18 @@
 use tauri::{AppHandle, Manager, WebviewWindow};
 
 #[cfg(windows)]
-use windows::Win32::Foundation::HWND;
-#[cfg(windows)]
-use windows::Win32::Graphics::Dwm::DwmExtendFrameIntoClientArea;
-#[cfg(windows)]
-use windows::Win32::UI::Controls::MARGINS;
+use super::{make_hwnd_transparent, strip_window_decorations};
 
 pub fn setup_settings_window(window: &WebviewWindow) {
+    let _ = window.set_title("");
+    let _ = window.set_decorations(false);
+    let _ = window.set_shadow(false);
     let _ = window.center();
 
     #[cfg(windows)]
     {
-        if let Ok(hwnd) = window.hwnd() {
-            let hwnd = HWND(hwnd.0);
-            unsafe {
-                let margins = MARGINS {
-                    cxLeftWidth: -1,
-                    cxRightWidth: -1,
-                    cyTopHeight: -1,
-                    cyBottomHeight: -1,
-                };
-                let _ = DwmExtendFrameIntoClientArea(hwnd, &margins);
-            }
-        }
+        strip_window_decorations(window);
+        make_hwnd_transparent(window);
     }
 }
 
@@ -37,6 +26,12 @@ pub fn toggle_settings_window(app: &AppHandle) {
             if is_visible {
                 let _ = window.hide();
             } else {
+                #[cfg(windows)]
+                {
+                    strip_window_decorations(&window);
+                    make_hwnd_transparent(&window);
+                    crate::core::taskbar::ensure_taskbar_hidden();
+                }
                 let _ = window.show();
                 let _ = window.set_focus();
             }

@@ -4,10 +4,11 @@ import { Search } from 'lucide-react';
 interface SearchInputProps {
   value: string;
   onChange: (value: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   inputRef?: React.RefObject<HTMLInputElement | null>;
 }
 
-export const SearchInput: React.FC<SearchInputProps> = ({ value, onChange, inputRef }) => {
+export const SearchInput: React.FC<SearchInputProps> = ({ value, onChange, onKeyDown, inputRef }) => {
   return (
     <div
       style={{
@@ -34,9 +35,10 @@ export const SearchInput: React.FC<SearchInputProps> = ({ value, onChange, input
         ref={inputRef}
         type="text"
         className="glass-input"
-        placeholder="Cari aplikasi..."
+        placeholder="Cari aplikasi, kalkulator (12*4), perintah (> ip)..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         style={{
           width: '100%',
           height: '100%',

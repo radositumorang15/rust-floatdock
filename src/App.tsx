@@ -74,12 +74,27 @@ export const App: React.FC = () => {
     } catch {}
     return THEME_DEFAULT;
   });
-  const [windowMode, setWindowMode] = useState<'dock' | 'start_menu' | 'notch' | 'settings' | 'all'>('all');
+  const [windowMode, setWindowMode] = useState<'dock' | 'start_menu' | 'notch' | 'settings' | 'all'>(() => {
+    try {
+      const hash = window.location.hash.replace('#', '').replace('/', '');
+      if (hash === 'dock' || hash === 'start_menu' || hash === 'notch' || hash === 'settings') {
+        return hash as any;
+      }
+      const appWindow = getCurrentWebviewWindow();
+      if (appWindow && appWindow.label) {
+        if (appWindow.label === 'dock') return 'dock';
+        if (appWindow.label === 'start_menu') return 'start_menu';
+        if (appWindow.label === 'notch') return 'notch';
+        if (appWindow.label === 'settings') return 'settings';
+      }
+    } catch {}
+    return 'dock';
+  });
   const [startMenuOpen, setStartMenuOpen] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
-    const hash = window.location.hash.replace('#', '');
+    const hash = window.location.hash.replace('#', '').replace('/', '');
     if (hash === 'dock' || hash === 'start_menu' || hash === 'notch' || hash === 'settings') {
       setWindowMode(hash as any);
       return;
@@ -94,7 +109,7 @@ export const App: React.FC = () => {
         else if (appWindow.label === 'settings') setWindowMode('settings');
       }
     } catch {
-      setWindowMode('all');
+      setWindowMode('dock');
     }
   }, []);
 
@@ -147,8 +162,18 @@ export const App: React.FC = () => {
     try {
       const state = await invoke<FullDockState>('get_full_dock_state');
       setDockState((prev) => {
-        if (
+        const sameWindows =
           prev.running_windows.length === state.running_windows.length &&
+          prev.running_windows.every(
+            (pw, i) =>
+              pw.hwnd === state.running_windows[i]?.hwnd &&
+              pw.title === state.running_windows[i]?.title &&
+              pw.is_minimized === state.running_windows[i]?.is_minimized &&
+              pw.profile_name === state.running_windows[i]?.profile_name
+          );
+
+        if (
+          sameWindows &&
           prev.battery.percentage === state.battery.percentage &&
           prev.volume.level === state.volume.level &&
           prev.network.is_connected === state.network.is_connected
@@ -168,7 +193,11 @@ export const App: React.FC = () => {
     let unlistenTimer: (() => void) | undefined;
     listen<TimerState>('timer-tick', (event) => {
       setDockState((prev) => {
-        if (prev.timer.remaining_seconds === event.payload.remaining_seconds) {
+        if (
+          prev.timer.remaining_seconds === event.payload.remaining_seconds &&
+          prev.timer.is_running === event.payload.is_running &&
+          prev.timer.is_finished === event.payload.is_finished
+        ) {
           return prev;
         }
         return {
@@ -180,7 +209,7 @@ export const App: React.FC = () => {
       unlistenTimer = unsub;
     }).catch(() => {});
 
-    const interval = setInterval(refreshState, 6000);
+    const interval = setInterval(refreshState, 2000);
 
     return () => {
       clearInterval(interval);
@@ -376,7 +405,18 @@ export const App: React.FC = () => {
   // 1. Single Window: DOCK
   if (windowMode === 'dock') {
     return (
-      <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+      <div
+        style={{
+          width: '100vw',
+          height: '100vh',
+          display: 'flex',
+          alignItems: 'flex-end',
+          justifyContent: 'center',
+          paddingBottom: '14px',
+          pointerEvents: 'none',
+          background: 'transparent',
+        }}
+      >
         <Dock
           state={dockState}
           theme={currentTheme}
@@ -420,6 +460,7 @@ export const App: React.FC = () => {
         timer={dockState.timer}
         media={dockState.media}
         theme={currentTheme}
+        onTogglePlayback={() => invoke('toggle_media_playback').catch(() => {})}
         onResize={handleResizeNotch}
       />
     );

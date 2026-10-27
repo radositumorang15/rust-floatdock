@@ -64,7 +64,14 @@ pub fn toggle_timer() -> TimerState {
     init_timer();
     let mut lock = TIMER.lock().unwrap();
     let timer = lock.as_mut().unwrap();
-    timer.is_running = !timer.is_running;
+    if timer.remaining_seconds == 0 || timer.is_finished {
+        timer.remaining_seconds = timer.total_seconds;
+        timer.formatted_time = format_time(timer.total_seconds);
+        timer.is_running = true;
+        timer.is_finished = false;
+    } else {
+        timer.is_running = !timer.is_running;
+    }
     timer.clone()
 }
 

@@ -367,6 +367,39 @@ export const AntigravityIcon: React.FC<IconProps> = ({ size = 44, parallaxX = 0,
   </SquircleTile>
 );
 
+export const VSCodeIcon: React.FC<IconProps> = ({ size = 44, parallaxX = 0, parallaxY = 0 }) => (
+  <SquircleTile size={size} bgGradient="linear-gradient(145deg, #0284C7 0%, #0369A1 100%)" parallaxX={parallaxX} parallaxY={parallaxY}>
+    <svg width={size * 0.72} height={size * 0.72} viewBox="0 0 32 32" fill="none">
+      <path d="M23.5 4.5L16.2 11.2L9.8 6.2L6 8.2V23.8L9.8 25.8L16.2 20.8L23.5 27.5L27 25.5V6.5L23.5 4.5Z" fill="#38BDF8" fillOpacity="0.3" />
+      <path d="M23.5 4.5L16.2 11.2L9.8 6.2L6 8.2V23.8L9.8 25.8L16.2 20.8L23.5 27.5L26 25.5V6.5L23.5 4.5Z" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9.8 6.2L23.5 16L9.8 25.8" stroke="#38BDF8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  </SquircleTile>
+);
+
+export const FigmaIcon: React.FC<IconProps> = ({ size = 44, parallaxX = 0, parallaxY = 0 }) => (
+  <SquircleTile size={size} bgGradient="linear-gradient(145deg, #18181B 0%, #09090B 100%)" parallaxX={parallaxX} parallaxY={parallaxY}>
+    <svg width={size * 0.68} height={size * 0.68} viewBox="0 0 32 32" fill="none">
+      <rect x="9" y="5" width="7" height="7" rx="3.5" fill="#F24E1E" />
+      <rect x="16" y="5" width="7" height="7" rx="3.5" fill="#FF7262" />
+      <rect x="9" y="12" width="7" height="7" rx="3.5" fill="#A259FF" />
+      <circle cx="19.5" cy="15.5" r="3.5" fill="#1ABCFE" />
+      <path d="M9 19H12.5C14.433 19 16 20.567 16 22.5C16 24.433 14.433 26 12.5 26C10.567 26 9 24.433 9 22.5V19Z" fill="#0ACF83" />
+    </svg>
+  </SquircleTile>
+);
+
+export const CometIcon: React.FC<IconProps> = ({ size = 44, parallaxX = 0, parallaxY = 0 }) => (
+  <SquircleTile size={size} bgGradient="linear-gradient(145deg, #4F46E5 0%, #2563EB 100%)" parallaxX={parallaxX} parallaxY={parallaxY}>
+    <svg width={size * 0.72} height={size * 0.72} viewBox="0 0 32 32" fill="none">
+      <circle cx="21" cy="11" r="5" fill="#FFFFFF" filter="drop-shadow(0 0 4px #93C5FD)" />
+      <path d="M19 13L7 25" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" />
+      <path d="M22 17L14 25" stroke="#93C5FD" strokeWidth="2" strokeLinecap="round" />
+      <path d="M15 10L7 18" stroke="#93C5FD" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  </SquircleTile>
+);
+
 // ==========================================
 // 3. GRIMOIRE THEME ORIGINAL MAGIC ICONS
 // ==========================================
@@ -496,6 +529,65 @@ export const TelegramIcon: React.FC<IconProps> = ({ size = 44, parallaxX = 0, pa
   </SquircleTile>
 );
 
+export const GeminiIcon: React.FC<IconProps> = ({ size = 44, parallaxX = 0, parallaxY = 0 }) => (
+  <SquircleTile size={size} bgGradient="linear-gradient(145deg, #1E1B4B 0%, #312E81 50%, #4338CA 100%)" parallaxX={parallaxX} parallaxY={parallaxY}>
+    <svg width={size * 0.72} height={size * 0.72} viewBox="0 0 32 32" fill="none">
+      <path
+        d="M16 4C16 10.6274 10.6274 16 4 16C10.6274 16 16 21.3726 16 28C16 21.3726 21.3726 16 28 16C21.3726 16 16 10.6274 16 4Z"
+        fill="url(#gemini_grad)"
+        filter="drop-shadow(0 2px 6px rgba(99,102,241,0.5))"
+      />
+      <circle cx="23" cy="9" r="2.5" fill="#A5B4FC" />
+      <defs>
+        <linearGradient id="gemini_grad" x1="4" y1="4" x2="28" y2="28" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#38BDF8" />
+          <stop offset="0.5" stopColor="#818CF8" />
+          <stop offset="1" stopColor="#C084FC" />
+        </linearGradient>
+      </defs>
+    </svg>
+  </SquircleTile>
+);
+
+export const SnippingToolIcon: React.FC<IconProps> = ({ size = 44, parallaxX = 0, parallaxY = 0 }) => (
+  <SquircleTile size={size} bgGradient="linear-gradient(145deg, #0284C7 0%, #0369A1 100%)" parallaxX={parallaxX} parallaxY={parallaxY}>
+    <svg width={size * 0.7} height={size * 0.7} viewBox="0 0 32 32" fill="none">
+      <path d="M8 12V8H12" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M24 12V8H20" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8 20V24H12" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M24 20V24H20" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="16" cy="16" r="3" fill="#38BDF8" />
+      <path d="M12 12L20 20M20 12L12 20" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  </SquircleTile>
+);
+
+export const CalculatorIcon: React.FC<IconProps> = ({ size = 44, parallaxX = 0, parallaxY = 0 }) => (
+  <SquircleTile size={size} bgGradient="linear-gradient(145deg, #334155 0%, #1E293B 100%)" parallaxX={parallaxX} parallaxY={parallaxY}>
+    <svg width={size * 0.68} height={size * 0.68} viewBox="0 0 32 32" fill="none">
+      <rect x="7" y="5" width="18" height="22" rx="3" fill="#0F172A" stroke="#475569" strokeWidth="1.5" />
+      <rect x="10" y="8" width="12" height="4" rx="1" fill="#38BDF8" fillOpacity="0.3" />
+      <circle cx="11.5" cy="16.5" r="1.5" fill="#94A3B8" />
+      <circle cx="16" cy="16.5" r="1.5" fill="#94A3B8" />
+      <circle cx="20.5" cy="16.5" r="1.5" fill="#38BDF8" />
+      <circle cx="11.5" cy="21" r="1.5" fill="#94A3B8" />
+      <circle cx="16" cy="21" r="1.5" fill="#94A3B8" />
+      <circle cx="20.5" cy="21" r="1.5" fill="#F59E0B" />
+    </svg>
+  </SquircleTile>
+);
+
+export const GenericAppIcon: React.FC<IconProps> = ({ size = 44, parallaxX = 0, parallaxY = 0 }) => (
+  <SquircleTile size={size} bgGradient="linear-gradient(145deg, #1E293B 0%, #0F172A 100%)" parallaxX={parallaxX} parallaxY={parallaxY}>
+    <svg width={size * 0.68} height={size * 0.68} viewBox="0 0 32 32" fill="none">
+      <rect x="7" y="7" width="8" height="8" rx="2" fill="#38BDF8" fillOpacity="0.85" />
+      <rect x="17" y="7" width="8" height="8" rx="2" fill="#818CF8" fillOpacity="0.85" />
+      <rect x="7" y="17" width="8" height="8" rx="2" fill="#C084FC" fillOpacity="0.85" />
+      <rect x="17" y="17" width="8" height="8" rx="2" fill="#34D399" fillOpacity="0.85" />
+    </svg>
+  </SquircleTile>
+);
+
 // ==========================================
 // 4. UI ICONS (Start Menu, Raycast, Power)
 // ==========================================
@@ -582,6 +674,24 @@ export const AppIconRenderer: React.FC<{
       return <TerminalIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
     case 'antigravity':
       return <AntigravityIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
+    case 'vscode':
+    case 'code':
+      return <VSCodeIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
+    case 'figma':
+      return <FigmaIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
+    case 'comet':
+      return <CometIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
+    case 'gemini':
+    case 'chatgpt':
+    case 'ai':
+      return <GeminiIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
+    case 'snipping_tool':
+    case 'snippingtool':
+    case 'snip':
+      return <SnippingToolIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
+    case 'calc':
+    case 'calculator':
+      return <CalculatorIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
     // Theme custom icons
     case 'grimoire-scroll':
       return <GrimoireScrollIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
@@ -590,7 +700,7 @@ export const AppIconRenderer: React.FC<{
     case 'mana-harp':
       return <ManaHarpIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
     default:
-      return <PureToolsIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
+      return <GenericAppIcon size={size} className={className} parallaxX={parallaxX} parallaxY={parallaxY} />;
   }
 };
 
