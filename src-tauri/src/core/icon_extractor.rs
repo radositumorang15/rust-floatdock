@@ -1,4 +1,4 @@
-//! Native Windows Icon Extractor (Supports .exe, .lnk shortcuts, and UWP)
+﻿//! Native Windows Icon Extractor (Supports .exe, .lnk shortcuts, and UWP)
 
 use std::collections::HashMap;
 use std::sync::Mutex;

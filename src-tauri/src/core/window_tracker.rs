@@ -198,6 +198,11 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, lparam: LPARAM) -> BO
             return BOOL(1);
         }
 
+        // Exclude own process windows
+        if crate::native_actions::is_own_window(hwnd) {
+            return BOOL(1);
+        }
+
         // Exclude Tool Windows
         let ex_style = GetWindowLongW(hwnd, GWL_EXSTYLE) as u32;
         if (ex_style & WS_EX_TOOLWINDOW.0) != 0 {
@@ -287,7 +292,7 @@ unsafe extern "system" fn enum_window_callback(hwnd: HWND, lparam: LPARAM) -> BO
         });
 
         let foreground_hwnd = GetForegroundWindow();
-        let is_active = hwnd == foreground_hwnd;
+        let is_active = hwnd == foreground_hwnd || hwnd.0 as isize == crate::native_actions::last_foreground();
         let is_minimized = IsIconic(hwnd).as_bool();
 
         list.push(TrackedWindow {

@@ -1,4 +1,4 @@
-//! Settings Window Management
+﻿//! Settings Window Management
 //! Controls display of the customization and preferences window.
 //! Theme changes are broadcast via Tauri events so all windows stay in sync.
 

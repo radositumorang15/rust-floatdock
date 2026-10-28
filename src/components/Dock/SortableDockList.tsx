@@ -28,6 +28,34 @@ interface SortableDockListProps {
 
 const STORAGE_ORDER_KEY = 'floatdock_pinned_order_v1';
 
+const DockIconImage: React.FC<{
+  name: string;
+  iconUrl?: string;
+  iconName: string;
+  theme?: ThemeConfig;
+}> = ({ name, iconUrl, iconName, theme }) => {
+  const [loadError, setLoadError] = useState(false);
+
+  if (iconUrl && !loadError) {
+    return (
+      <img
+        src={iconUrl}
+        alt={name}
+        onError={() => setLoadError(true)}
+        style={{
+          width: '38px',
+          height: '38px',
+          borderRadius: '8px',
+          objectFit: 'contain',
+          filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+          pointerEvents: 'none',
+        }}
+      />
+    );
+  }
+  return <AppIconRenderer iconName={iconName} size={40} theme={theme} />;
+};
+
 export const SortableDockList: React.FC<SortableDockListProps> = ({
   items,
   theme,
@@ -124,22 +152,12 @@ export const SortableDockList: React.FC<SortableDockListProps> = ({
             onLaunchNewInstance={() => onLaunchApp(app)}
             onPreviewHoverChange={(open) => handlePreviewHover(app.id, open)}
           >
-            {app.iconUrl ? (
-              <img
-                src={app.iconUrl}
-                alt={app.name}
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '8px',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
-                  pointerEvents: 'none',
-                }}
-              />
-            ) : (
-              <AppIconRenderer iconName={app.iconName} size={40} theme={theme} />
-            )}
+            <DockIconImage
+              name={app.name}
+              iconUrl={app.iconUrl}
+              iconName={app.iconName}
+              theme={theme}
+            />
           </DockIconWithPreview>
         </div>
       ))}
@@ -172,22 +190,12 @@ export const SortableDockList: React.FC<SortableDockListProps> = ({
             onLaunchNewInstance={() => onLaunchApp(app)}
             onPreviewHoverChange={(open) => handlePreviewHover(app.id, open)}
           >
-            {app.iconUrl ? (
-              <img
-                src={app.iconUrl}
-                alt={app.name}
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '8px',
-                  objectFit: 'contain',
-                  filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
-                  pointerEvents: 'none',
-                }}
-              />
-            ) : (
-              <AppIconRenderer iconName={app.iconName} size={40} theme={theme} />
-            )}
+            <DockIconImage
+              name={app.name}
+              iconUrl={app.iconUrl}
+              iconName={app.iconName}
+              theme={theme}
+            />
           </DockIconWithPreview>
         </div>
       ))}

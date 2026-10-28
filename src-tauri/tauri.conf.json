@@ -16,7 +16,7 @@
         "title": "Float Dock",
         "url": "index.html#dock",
         "width": 1680,
-        "height": 280,
+        "height": 100,
         "transparent": true,
         "decorations": false,
         "alwaysOnTop": true,

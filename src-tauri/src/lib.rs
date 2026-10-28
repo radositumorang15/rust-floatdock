@@ -1,3 +1,5 @@
+pub mod shell_shortcuts;
+pub mod native_actions;
 pub mod core;
 pub mod ipc;
 pub mod services;
@@ -61,11 +63,17 @@ pub fn run() {
             media_skip_next,
             media_skip_previous,
             get_available_chrome_profiles,
-            launch_chrome_profile
+            launch_chrome_profile,
+            open_native_start,
+            open_quick_settings,
+            open_notification_center,
+            toggle_window,
+            activate_group
         ])
         .setup(|app| {
             // Spawn watchdog process to guarantee taskbar restoration if process terminates
             spawn_watchdog();
+            crate::native_actions::start_event_hooks(app.handle().clone());
 
             // Hide default Windows taskbar so float dock takes its place cleanly
             hide_taskbar();
@@ -97,6 +105,25 @@ pub fn run() {
                     tokio::time::sleep(Duration::from_secs(1)).await;
                     if let Some(timer_state) = tick_timer() {
                         let _ = app_handle.emit("timer-tick", timer_state);
+                    }
+                }
+            });
+
+            // Spawn background media update monitor (every 400ms)
+            let media_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                let mut last_state = crate::services::media::MediaState {
+                    title: String::new(),
+                    artist: String::new(),
+                    is_playing: false,
+                    has_media: false,
+                };
+                loop {
+                    tokio::time::sleep(Duration::from_millis(400)).await;
+                    let current = crate::services::media::get_media_state().await;
+                    if current != last_state {
+                        last_state = current.clone();
+                        let _ = media_handle.emit("media-updated", current);
                     }
                 }
             });

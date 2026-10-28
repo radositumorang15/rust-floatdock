@@ -1,4 +1,4 @@
-//! Dynamic App Grouping, Chrome Profile Separator & Window Preview Collector
+﻿//! Dynamic App Grouping, Chrome Profile Separator & Window Preview Collector
 
 use serde::Serialize;
 use std::collections::HashMap;

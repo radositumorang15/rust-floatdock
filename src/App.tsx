@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { getCurrentWebviewWindow } from '@tauri-apps/api/webviewWindow';
 
-import { AppEntry, FullDockState, TrackedWindow, TimerState } from './types';
+import { AppEntry, FullDockState, TrackedWindow, TimerState, MediaState } from './types';
 import { ThemeConfig, ManaAttribute, MANA_PALETTES } from './themes/types';
 import { THEME_DEFAULT } from './themes/presets';
 import { applyThemeToCss } from './themes/applyTheme';
@@ -24,17 +24,12 @@ const DEFAULT_STATE: FullDockState = {
     { id: 'illustrator', name: 'Adobe Illustrator', exec_path: 'C:\\Program Files\\Adobe\\Adobe Illustrator 2026\\Support Files\\Contents\\Windows\\Illustrator.exe', icon_name: 'illustrator', is_pinned: true, category: 'Desain' },
     { id: 'cursor', name: 'Cursor', exec_path: 'C:\\Users\\tamu\\AppData\\Local\\Programs\\cursor\\Cursor.exe', icon_name: 'cursor', is_pinned: true, category: 'Pengembangan' },
     { id: 'github', name: 'GitHub Desktop', exec_path: 'C:\\Users\\tamu\\AppData\\Local\\GitHubDesktop\\GitHubDesktop.exe', icon_name: 'github', is_pinned: true, category: 'Pengembangan' },
-    { id: 'telegram', name: 'Telegram', exec_path: 'telegram.exe', icon_name: 'telegram', is_pinned: true, category: 'Komunikasi' },
     { id: 'antigravity', name: 'Antigravity IDE', exec_path: 'D:\\Antigravity IDE\\Antigravity IDE.exe', icon_name: 'antigravity', is_pinned: true, category: 'Pengembangan' },
     { id: 'terminal', name: 'Terminal', exec_path: 'wt.exe', icon_name: 'terminal', is_pinned: true, category: 'Sistem' },
     { id: 'chrome', name: 'Google Chrome', exec_path: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', icon_name: 'chrome', is_pinned: true, category: 'Komunikasi' },
     { id: 'settings', name: 'Pengaturan', exec_path: 'ms-settings:', icon_name: 'settings', is_pinned: true, category: 'Sistem' },
   ],
-  running_windows: [
-    { hwnd: 101, title: 'Brave Browser', process_id: 1200, app_name: 'brave.exe', is_active: false, is_minimized: false },
-    { hwnd: 102, title: 'Microsoft Edge', process_id: 1210, app_name: 'msedge.exe', is_active: true, is_minimized: false },
-    { hwnd: 103, title: 'Discord', process_id: 1220, app_name: 'discord.exe', is_active: false, is_minimized: false },
-  ],
+  running_windows: [],
   battery: { percentage: 95, is_charging: true, is_plugged_in: true, has_battery: true },
   volume: { level: 80, is_muted: false },
   network: { is_connected: true, ssid: 'Home Wi-Fi', signal_strength: 95, is_wifi: true },
@@ -47,10 +42,10 @@ const DEFAULT_STATE: FullDockState = {
     formatted_time: '57:12',
   },
   media: {
-    title: 'Ambient Waters',
-    artist: 'Float Dock',
-    is_playing: true,
-    has_media: true,
+    title: '',
+    artist: '',
+    is_playing: false,
+    has_media: false,
   },
   weather: {
     temperature: 30,
@@ -62,8 +57,28 @@ const DEFAULT_STATE: FullDockState = {
 
 const globalThemeChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('floatdock-theme') : null;
 
+export interface LaunchMods {
+  shift?: boolean;
+  ctrl?: boolean;
+  newInstance?: boolean;
+}
+
+const HIDDEN_APPS = ['telegram'];
+
 export const App: React.FC = () => {
   const [dockState, setDockState] = useState<FullDockState>(DEFAULT_STATE);
+
+  const visibleState = React.useMemo(() => {
+    const isHidden = (name: string, path = '') => {
+      const s = `${name} ${path}`.toLowerCase();
+      return HIDDEN_APPS.some((h) => s.includes(h));
+    };
+    return {
+      ...dockState,
+      pinned_apps: dockState.pinned_apps.filter((a) => !isHidden(a.name, a.exec_path)),
+      running_windows: dockState.running_windows.filter((w) => !isHidden(w.app_name, w.exec_path || '')),
+    };
+  }, [dockState]);
   const [currentTheme, setCurrentTheme] = useState<ThemeConfig>(() => {
     try {
       const saved = localStorage.getItem('floatdock_theme');
@@ -162,6 +177,14 @@ export const App: React.FC = () => {
     try {
       const state = await invoke<FullDockState>('get_full_dock_state');
       setDockState((prev) => {
+        const samePinned =
+          prev.pinned_apps.length === state.pinned_apps.length &&
+          prev.pinned_apps.every(
+            (p, i) =>
+              p.id === state.pinned_apps[i]?.id &&
+              p.icon_url === state.pinned_apps[i]?.icon_url
+          );
+
         const sameWindows =
           prev.running_windows.length === state.running_windows.length &&
           prev.running_windows.every(
@@ -169,11 +192,20 @@ export const App: React.FC = () => {
               pw.hwnd === state.running_windows[i]?.hwnd &&
               pw.title === state.running_windows[i]?.title &&
               pw.is_minimized === state.running_windows[i]?.is_minimized &&
+              pw.is_active === state.running_windows[i]?.is_active &&
               pw.profile_name === state.running_windows[i]?.profile_name
           );
 
+        const sameMedia =
+          prev.media?.title === state.media?.title &&
+          prev.media?.artist === state.media?.artist &&
+          prev.media?.is_playing === state.media?.is_playing &&
+          prev.media?.has_media === state.media?.has_media;
+
         if (
+          samePinned &&
           sameWindows &&
+          sameMedia &&
           prev.battery.percentage === state.battery.percentage &&
           prev.volume.level === state.volume.level &&
           prev.network.is_connected === state.network.is_connected
@@ -182,8 +214,8 @@ export const App: React.FC = () => {
         }
         return state;
       });
-    } catch {
-      // Outside Tauri
+    } catch (err) {
+      console.error('Failed to get full dock state:', err);
     }
   }, []);
 
@@ -209,11 +241,46 @@ export const App: React.FC = () => {
       unlistenTimer = unsub;
     }).catch(() => {});
 
+    let unlistenMedia: (() => void) | undefined;
+    listen<MediaState>('media-updated', (event) => {
+      setDockState((prev) => {
+        if (
+          prev.media?.title === event.payload.title &&
+          prev.media?.artist === event.payload.artist &&
+          prev.media?.is_playing === event.payload.is_playing &&
+          prev.media?.has_media === event.payload.has_media
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          media: event.payload,
+        };
+      });
+    }).then((unsub) => {
+      unlistenMedia = unsub;
+    }).catch(() => {});
+
+    let t: number | undefined;
+    let unlistenWin: (() => void) | undefined;
+    let disposed = false;
+
+    listen("windows-changed", () => {
+      clearTimeout(t);
+      t = window.setTimeout(refreshState, 60);
+    })
+      .then((un) => (disposed ? un() : (unlistenWin = un)))
+      .catch(() => {});
+
     const interval = setInterval(refreshState, 2000);
 
     return () => {
+      disposed = true;
+      clearTimeout(t);
       clearInterval(interval);
       if (unlistenTimer) unlistenTimer();
+      if (unlistenMedia) unlistenMedia();
+      if (unlistenWin) unlistenWin();
     };
   }, [refreshState]);
 
@@ -263,7 +330,7 @@ export const App: React.FC = () => {
   // Actions
   const handleToggleStartMenu = async () => {
     try {
-      await invoke('toggle_start_menu');
+      await invoke('open_native_start');
     } catch {
       setStartMenuOpen((prev) => !prev);
     }
@@ -277,18 +344,24 @@ export const App: React.FC = () => {
     }
   };
 
-  const handleLaunchApp = async (app: AppEntry, running?: TrackedWindow) => {
+  const handleLaunchApp = async (
+    app: AppEntry,
+    running?: TrackedWindow,
+    mods: LaunchMods = {}
+  ) => {
     if (app.id === 'settings') {
       handleOpenSettings();
       return;
     }
 
-    if (running) {
-      try {
-        await invoke('focus_window', { hwnd: running.hwnd });
-        return;
-      } catch {}
+    if (mods.ctrl && mods.shift) {
+      return handleLaunchAdmin(app.exec_path);
     }
+
+    if (!mods.shift && !mods.newInstance && running) {
+      return invoke('toggle_window', { hwnd: running.hwnd }).catch(() => {});
+    }
+
     try {
       await invoke('launch_app', { target: app.exec_path });
     } catch (e) {
@@ -378,8 +451,10 @@ export const App: React.FC = () => {
 
   const handleOpenNetwork = async () => {
     try {
-      await invoke('open_network_flyout');
-    } catch {}
+      await invoke('open_quick_settings');
+    } catch {
+      await invoke('open_network_flyout').catch(() => {});
+    }
   };
 
   const handlePowerAction = async (action: string) => {
@@ -418,7 +493,7 @@ export const App: React.FC = () => {
         }}
       >
         <Dock
-          state={dockState}
+          state={visibleState}
           theme={currentTheme}
           onToggleStartMenu={handleToggleStartMenu}
           onLaunchApp={handleLaunchApp}
@@ -542,7 +617,7 @@ export const App: React.FC = () => {
         {/* Floating Glass Dock */}
         <div style={{ pointerEvents: 'auto' }}>
           <Dock
-            state={dockState}
+            state={visibleState}
             theme={currentTheme}
             onToggleStartMenu={() => setStartMenuOpen((prev) => !prev)}
             onLaunchApp={handleLaunchApp}

@@ -40,6 +40,12 @@ static PREV_HW: Lazy<Mutex<PrevHardwareState>> = Lazy::new(|| {
     })
 });
 
+static LAST_AUDIO_PEAK: Lazy<Mutex<f32>> = Lazy::new(|| Mutex::new(0.0));
+
+pub fn get_last_audio_peak() -> f32 {
+    LAST_AUDIO_PEAK.lock().map(|g| *g).unwrap_or(0.0)
+}
+
 #[cfg(windows)]
 pub fn poll_hardware_and_audio() -> HardwareAudioState {
     unsafe {
@@ -62,6 +68,10 @@ pub fn poll_hardware_and_audio() -> HardwareAudioState {
                     peak = meter.GetPeakValue().unwrap_or(0.0).clamp(0.0, 1.0);
                 }
             }
+        }
+
+        if let Ok(mut g) = LAST_AUDIO_PEAK.lock() {
+            *g = peak;
         }
 
         // Bentuk 5 bar visualizer proporsional dari Peak + variasi harmonik

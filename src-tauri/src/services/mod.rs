@@ -1,4 +1,4 @@
-pub mod apps_index;
+﻿pub mod apps_index;
 pub mod battery;
 pub mod hardware_audio;
 pub mod icons;

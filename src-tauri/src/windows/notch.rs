@@ -6,7 +6,7 @@ use tauri::WebviewWindow;
 #[cfg(windows)]
 use super::{make_hwnd_transparent, strip_window_decorations};
 
-pub const NOTCH_IDLE_WIDTH: f64 = 124.0;
+pub const NOTCH_IDLE_WIDTH: f64 = 132.0;
 pub const NOTCH_IDLE_HEIGHT: f64 = 36.0;
 
 pub fn setup_notch_window(window: &WebviewWindow) {
@@ -19,6 +19,7 @@ pub fn setup_notch_window(window: &WebviewWindow) {
     {
         strip_window_decorations(window);
         make_hwnd_transparent(window);
+        crate::native_actions::set_no_activate(window);
     }
 
     reposition_notch(window, NOTCH_IDLE_WIDTH, NOTCH_IDLE_HEIGHT);

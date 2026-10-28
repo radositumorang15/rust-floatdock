@@ -89,6 +89,7 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
             padding: '10px 12px',
             minWidth: '260px',
             maxWidth: '380px',
+            maxHeight: '400px',
             width: 'max-content',
             display: 'flex',
             flexDirection: 'column',
@@ -150,7 +151,7 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '5px',
-                maxHeight: '160px',
+                maxHeight: isChrome && chromeProfiles.length > 0 ? '190px' : '280px',
                 overflowY: 'auto',
                 scrollbarWidth: 'thin',
                 paddingRight: '2px',
@@ -309,9 +310,15 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
 
       {/* IKON APLIKASI DI DOCK */}
       <div
-        onClick={() => {
-          if (windows.length > 0) {
-            onFocusWindow(windows[0].hwnd);
+        onClick={(e) => {
+          if (e.shiftKey) {
+            onLaunchNewInstance();
+            return;
+          }
+          if (windows.length > 1) {
+            invoke("activate_group", { hwnds: windows.map((w) => w.hwnd) }).catch(() => {});
+          } else if (windows.length === 1) {
+            invoke("toggle_window", { hwnd: windows[0].hwnd }).catch(() => {});
           } else {
             onLaunchNewInstance();
           }

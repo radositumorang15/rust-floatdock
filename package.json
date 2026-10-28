@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "prebuild": "powershell -NoProfile -Command \"Stop-Process -Name watchdog, float-dock -Force -ErrorAction SilentlyContinue; exit 0\"",
+    "build": "npm run prebuild && tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "build:app": "npm run prebuild && tauri build --no-bundle"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

@@ -1,4 +1,4 @@
-//! Countdown Reminder / Timer Service
+﻿//! Countdown Reminder / Timer Service
 //! Manages timer state, countdown ticks, and completion notifications (e.g. "57:12 minum").
 
 use serde::{Deserialize, Serialize};

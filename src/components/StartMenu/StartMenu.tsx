@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { AppEntry } from '../../types';
 import { ThemeConfig } from '../../themes/types';
 import { GeometricClover } from '../common/CloverIcon';

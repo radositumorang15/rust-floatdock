@@ -3,12 +3,11 @@ import { Search, LayoutGrid, Bell } from 'lucide-react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { AppEntry, FullDockState, TrackedWindow, ContextMenuState, ContextMenuItem, SystemPulse, WindowInstance } from '../../types';
-import { Windows11Logo, TelegramIcon } from '../common/AppIcons';
+import { Windows11Logo } from '../common/AppIcons';
 import { GeometricClover } from '../common/CloverIcon';
 import { ManaParticles } from '../common/ManaParticles';
 import { ThemeConfig, ManaAttribute } from '../../themes/types';
 import { AVAILABLE_THEMES } from '../../themes/presets';
-import { Pill } from './Pill';
 import { TrayArea } from './TrayIcon';
 import { ContextMenu } from '../common/ContextMenu';
 import { SortableDockList, DockItemData } from './SortableDockList';
@@ -37,8 +36,8 @@ export const Dock: React.FC<DockProps> = ({
   onLaunchApp,
   onLaunchAdmin,
   onCloseWindow,
-  onToggleTimer,
-  onResetTimer,
+  onToggleTimer: _onToggleTimer,
+  onResetTimer: _onResetTimer,
   onOpenNetwork,
   onStepVolume,
   onToggleMute,
@@ -174,6 +173,7 @@ export const Dock: React.FC<DockProps> = ({
         app.name.toLowerCase().includes('chrome') ||
         app.exec_path.toLowerCase().includes('chrome.exe');
 
+      let resolvedIconUrl = app.icon_url;
       const matchingWins: WindowInstance[] = state.running_windows
         .filter((w) => {
           if (assignedHwnds.has(w.hwnd)) return false;
@@ -185,14 +185,35 @@ export const Dock: React.FC<DockProps> = ({
               w.title.toLowerCase().includes('google chrome') ||
               (w.exec_path && w.exec_path.toLowerCase().includes('chrome.exe'));
 
+            if (isWinChrome && !resolvedIconUrl && w.icon_url) {
+              resolvedIconUrl = w.icon_url;
+            }
             return Boolean(isWinChrome);
           }
 
-          return (
-            w.app_name.toLowerCase().includes(app.name.toLowerCase()) ||
-            app.exec_path.toLowerCase().includes(w.app_name.toLowerCase()) ||
-            w.title.toLowerCase().includes(app.name.toLowerCase())
+          const appStem = app.name.toLowerCase().replace(/\.exe|\.lnk/g, '').trim();
+          const winStem = (w.app_name || '').toLowerCase().replace(/\.exe/g, '').trim();
+          const winTitle = (w.title || '').toLowerCase();
+          const appExec = (app.exec_path || '').toLowerCase();
+          const winExec = (w.exec_path || '').toLowerCase();
+
+          const appExeName = appExec.split(/[\\/]/).pop()?.replace(/\.lnk/g, '') || '';
+          const winExeName = winExec.split(/[\\/]/).pop() || '';
+
+          const exeMatch = Boolean(winExeName && (appExeName.includes(winExeName) || winExeName.includes(appExeName)));
+          const nameMatch = Boolean(winStem && (appStem.includes(winStem) || winStem.includes(appStem)));
+          const titleMatch = Boolean(appStem.length >= 3 && winTitle.includes(appStem));
+          const iconMatch = Boolean(
+            app.icon_name && app.icon_name !== 'default' && (
+              winStem.includes(app.icon_name) || winTitle.includes(app.icon_name) || winExeName.includes(app.icon_name)
+            )
           );
+
+          const matches = exeMatch || nameMatch || titleMatch || iconMatch;
+          if (matches && !resolvedIconUrl && w.icon_url) {
+            resolvedIconUrl = w.icon_url;
+          }
+          return matches;
         })
         .map((w) => {
           assignedHwnds.add(w.hwnd);
@@ -209,7 +230,7 @@ export const Dock: React.FC<DockProps> = ({
         name: app.name,
         execPath: app.exec_path,
         iconName: app.icon_name,
-        iconUrl: app.icon_url,
+        iconUrl: resolvedIconUrl,
         isPinned: true,
         windows: matchingWins,
       });
@@ -309,9 +330,20 @@ export const Dock: React.FC<DockProps> = ({
     items: [],
   });
 
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const isExpanded = Boolean(previewOpen || contextMenu.visible);
+
   useEffect(() => {
-    invoke('resize_dock', { expanded: false, hidden: debouncedHidden }).catch(() => {});
-  }, [debouncedHidden]);
+    let timeout: number | undefined;
+    if (isExpanded) {
+      invoke('resize_dock', { expanded: true, hidden: debouncedHidden }).catch(() => {});
+    } else {
+      timeout = window.setTimeout(() => {
+        invoke('resize_dock', { expanded: false, hidden: debouncedHidden }).catch(() => {});
+      }, 200);
+    }
+    return () => clearTimeout(timeout);
+  }, [isExpanded, debouncedHidden]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (iconStripRef.current) {
@@ -449,26 +481,6 @@ export const Dock: React.FC<DockProps> = ({
     });
   };
 
-  const handlePillContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({
-      x: e.clientX,
-      y: Math.max(e.clientY - 90, 10),
-      visible: true,
-      items: [
-        {
-          label: state.timer.is_running ? 'Jeda Timer' : 'Lanjutkan Timer',
-          action: onToggleTimer,
-        },
-        {
-          label: 'Reset Timer (57:12)',
-          action: onResetTimer,
-        },
-      ],
-    });
-  };
-
   const accentColor = theme?.accent || 'var(--accent)';
   const isGrimoire = theme?.id === 'grimoire' || theme?.id === 'grimoire-verdant';
   const isLight = theme?.mode === 'light';
@@ -600,6 +612,10 @@ export const Dock: React.FC<DockProps> = ({
             items={dockItems}
             theme={theme}
             accentColor={accentColor}
+            onPreviewHoverChange={(open) => {
+              setPreviewOpen(open);
+              setIsDockHovered(open);
+            }}
             onFocusWindow={(hwnd) => invoke('focus_window', { hwnd }).catch(() => {})}
             onCloseWindow={(hwnd) => onCloseWindow(hwnd)}
             onLaunchApp={(item) =>
@@ -676,42 +692,7 @@ export const Dock: React.FC<DockProps> = ({
           >
             <Bell size={16} />
           </div>
-
-          {/* Telegram / Chat icon with active dot */}
-          <div
-            onClick={() => onLaunchApp({ id: 'telegram', name: 'Telegram', exec_path: 'telegram.exe', icon_name: 'telegram', is_pinned: true, category: 'Komunikasi' })}
-            className="quick-tool-btn"
-            title="Telegram (1 pesan baru)"
-            style={{ position: 'relative' }}
-          >
-            <TelegramIcon size={26} />
-            <div
-              style={{
-                position: 'absolute',
-                bottom: '1px',
-                right: '1px',
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: '#38BDF8',
-                border: '1.5px solid rgba(0,0,0,0.4)',
-              }}
-            />
-          </div>
         </div>
-
-        {/* Sleek Timer Pill (Shown when timer is running or finished) */}
-        {state.timer && (state.timer.is_running || state.timer.is_finished) && (
-          <div style={{ marginLeft: '4px' }}>
-            <Pill
-              timer={state.timer}
-              theme={theme}
-              onToggle={onToggleTimer}
-              onReset={onResetTimer}
-              onContextMenu={handlePillContextMenu}
-            />
-          </div>
-        )}
         </div>
       </div>
 
@@ -756,7 +737,7 @@ export const Dock: React.FC<DockProps> = ({
             onOpenNetwork={onOpenNetwork}
             onStepVolume={onStepVolume}
             onToggleMute={onToggleMute}
-            onOpenCalendar={onOpenSettings}
+            onOpenCalendar={() => invoke('open_notification_center').catch(() => {})}
           />
         </div>
       </div>

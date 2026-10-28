@@ -113,6 +113,9 @@ pub fn get_default_dock_apps() -> Vec<AppEntry> {
         let mut apps = Vec::new();
         for shortcut in shortcuts {
             if let Some(stem) = shortcut.file_stem().and_then(|s| s.to_str()) {
+                if stem.to_lowercase().contains("telegram") {
+                    continue;
+                }
                 let id = stem.to_lowercase().replace(' ', "_");
                 let icon_name = resolve_icon_name(stem);
                 let shortcut_str = shortcut.to_string_lossy().to_string();
@@ -127,6 +130,46 @@ pub fn get_default_dock_apps() -> Vec<AppEntry> {
                     category: "Pinned".to_string(),
                 });
             }
+        }
+
+        // Ensure core tools and apps are present
+        if !apps.iter().any(|a| a.id == "antigravity" || a.icon_name == "antigravity") {
+            let path = r"D:\Antigravity IDE\Antigravity IDE.exe";
+            if Path::new(path).exists() {
+                apps.push(AppEntry {
+                    id: "antigravity".to_string(),
+                    name: "Antigravity IDE".to_string(),
+                    exec_path: path.to_string(),
+                    icon_name: "antigravity".to_string(),
+                    icon_url: crate::core::icon_extractor::extract_icon_base64(path, 48),
+                    is_pinned: true,
+                    category: "Development".to_string(),
+                });
+            }
+        }
+
+        if !apps.iter().any(|a| a.id == "terminal" || a.icon_name == "terminal") {
+            apps.push(AppEntry {
+                id: "terminal".to_string(),
+                name: "Terminal".to_string(),
+                exec_path: "wt.exe".to_string(),
+                icon_name: "terminal".to_string(),
+                icon_url: crate::core::icon_extractor::extract_icon_base64("wt.exe", 48),
+                is_pinned: true,
+                category: "System".to_string(),
+            });
+        }
+
+        if !apps.iter().any(|a| a.id == "explorer" || a.icon_name == "explorer") {
+            apps.push(AppEntry {
+                id: "explorer".to_string(),
+                name: "File Explorer".to_string(),
+                exec_path: "explorer.exe".to_string(),
+                icon_name: "explorer".to_string(),
+                icon_url: crate::core::icon_extractor::extract_icon_base64("explorer.exe", 48),
+                is_pinned: true,
+                category: "System".to_string(),
+            });
         }
 
         // Ensure Pengaturan (Settings) is always available at the end

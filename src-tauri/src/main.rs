@@ -1,4 +1,4 @@
-// Prevents console window on Windows in both debug and release
+﻿// Prevents console window on Windows in both debug and release
 #![windows_subsystem = "windows"]
 
 fn main() {

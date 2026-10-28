@@ -1,4 +1,4 @@
-//! Windows Taskbar Hide/Restore and Watchdog Spawner
+﻿//! Windows Taskbar Hide/Restore and Watchdog Spawner
 //! Manages Shell_TrayWnd visibility and ensures safety during crash or shutdown.
 
 use std::process::Command;

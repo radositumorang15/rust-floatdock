@@ -175,9 +175,19 @@ pub fn resize_notch(app: AppHandle, width: f64, height: f64) {
 }
 
 #[tauri::command]
-pub fn resize_dock(app: AppHandle, _expanded: bool, hidden: bool) {
+pub fn resize_dock(app: AppHandle, expanded: bool, hidden: bool) {
     if let Some(window) = app.get_webview_window("dock") {
-        let _ = window.set_ignore_cursor_events(hidden);
+        if hidden {
+            let _ = window.set_ignore_cursor_events(true);
+        } else {
+            let _ = window.set_ignore_cursor_events(false);
+            let h = if expanded {
+                crate::windows::dock::DOCK_EXPANDED_HEIGHT
+            } else {
+                crate::windows::dock::DOCK_IDLE_HEIGHT
+            };
+            crate::windows::dock::reposition_dock(&window, h);
+        }
     }
 }
 
@@ -376,4 +386,30 @@ pub fn get_grouped_dock_apps() -> Vec<crate::core::app_grouper::GroupedDockApp> 
 #[tauri::command]
 pub fn get_native_app_icon(path: String, size: Option<i32>) -> Option<String> {
     crate::core::icon_extractor::extract_icon_base64(&path, size.unwrap_or(48))
+}
+
+
+#[tauri::command]
+pub fn open_native_start() {
+    crate::shell_shortcuts::open_start();
+}
+
+#[tauri::command]
+pub fn open_quick_settings() {
+    crate::shell_shortcuts::open_quick_settings();
+}
+
+#[tauri::command]
+pub fn open_notification_center() {
+    crate::shell_shortcuts::open_notification_center();
+}
+
+#[tauri::command]
+pub fn toggle_window(hwnd: isize) -> String {
+    crate::native_actions::toggle_window(hwnd).to_string()
+}
+
+#[tauri::command]
+pub fn activate_group(hwnds: Vec<isize>) -> String {
+    crate::native_actions::activate_group(&hwnds).to_string()
 }

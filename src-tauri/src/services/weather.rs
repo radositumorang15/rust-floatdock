@@ -35,25 +35,14 @@ static CACHE: Mutex<Option<CachedWeather>> = Mutex::new(None);
 pub async fn get_weather(lat: Option<f64>, lon: Option<f64>) -> WeatherInfo {
     // Check 30-minute cache first
     {
-        let cache = CACHE.lock().unwrap();
-        if let Some(ref cached) = *cache {
-            if cached.fetched_at.elapsed() < Duration::from_secs(1800) {
-                return cached.info.clone();
+        if let Ok(cache) = CACHE.lock() {
+            if let Some(ref cached) = *cache {
+                if cached.fetched_at.elapsed() < Duration::from_secs(1800) {
+                    return cached.info.clone();
+                }
             }
         }
     }
-
-    let latitude = lat.unwrap_or(-6.2088);
-    let longitude = lon.unwrap_or(106.8456);
-
-    let url = format!(
-        "https://api.open-meteo.com/v1/forecast?latitude={:.4}&longitude={:.4}&current=temperature_2m,weather_code,is_day",
-        latitude, longitude
-    );
-
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(4))
-        .build();
 
     let fallback = WeatherInfo {
         temperature: 30.0,
@@ -62,42 +51,62 @@ pub async fn get_weather(lat: Option<f64>, lon: Option<f64>) -> WeatherInfo {
         is_day: true,
     };
 
-    if let Ok(client) = client {
-        if let Ok(resp) = client.get(&url).send().await {
-            if let Ok(data) = resp.json::<OpenMeteoResponse>().await {
-                if let Some(current) = data.current {
-                    let temp = current.temperature_2m.unwrap_or(30.0);
-                    let code = current.weather_code.unwrap_or(1);
-                    let is_day = current.is_day.unwrap_or(1) == 1;
+    // Non-blocking background fetch so get_full_dock_state never blocks
+    tauri::async_runtime::spawn(async move {
+        let latitude = lat.unwrap_or(-6.2088);
+        let longitude = lon.unwrap_or(106.8456);
 
-                    let condition = match code {
-                        0 => "Cerah",
-                        1..=3 => "Sebagian Berawan",
-                        45 | 48 => "Berkabut",
-                        51..=55 => "Gerimis",
-                        61..=65 => "Hujan",
-                        80..=82 => "Hujan Lebat",
-                        95..=99 => "Badai Petir",
-                        _ => "Cerah Berawan",
+        let url = format!(
+            "https://api.open-meteo.com/v1/forecast?latitude={:.4}&longitude={:.4}&current=temperature_2m,weather_code,is_day",
+            latitude, longitude
+        );
+
+        let client = reqwest::Client::builder()
+            .timeout(Duration::from_secs(3))
+            .build();
+
+        if let Ok(client) = client {
+            if let Ok(resp) = client.get(&url).send().await {
+                if let Ok(data) = resp.json::<OpenMeteoResponse>().await {
+                    if let Some(current) = data.current {
+                        let temp = current.temperature_2m.unwrap_or(30.0);
+                        let code = current.weather_code.unwrap_or(1);
+                        let is_day = current.is_day.unwrap_or(1) == 1;
+
+                        let condition = match code {
+                            0 => "Cerah",
+                            1..=3 => "Sebagian Berawan",
+                            45 | 48 => "Berkabut",
+                            51..=55 => "Gerimis",
+                            61..=65 => "Hujan",
+                            80..=82 => "Hujan Lebat",
+                            95..=99 => "Badai Petir",
+                            _ => "Cerah Berawan",
+                        }
+                        .to_string();
+
+                        let info = WeatherInfo {
+                            temperature: temp.round(),
+                            condition,
+                            weather_code: code,
+                            is_day,
+                        };
+
+                        if let Ok(mut cache) = CACHE.lock() {
+                            *cache = Some(CachedWeather {
+                                info,
+                                fetched_at: Instant::now(),
+                            });
+                        }
                     }
-                    .to_string();
-
-                    let info = WeatherInfo {
-                        temperature: temp.round(),
-                        condition,
-                        weather_code: code,
-                        is_day,
-                    };
-
-                    let mut cache = CACHE.lock().unwrap();
-                    *cache = Some(CachedWeather {
-                        info: info.clone(),
-                        fetched_at: Instant::now(),
-                    });
-
-                    return info;
                 }
             }
+        }
+    });
+
+    if let Ok(cache) = CACHE.lock() {
+        if let Some(ref cached) = *cache {
+            return cached.info.clone();
         }
     }
 

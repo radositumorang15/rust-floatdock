@@ -1,4 +1,4 @@
-//! Start Menu Window Management
+﻿//! Start Menu Window Management
 //! Aligns above the Start button, manages open/close animations, and auto-hides on blur.
 
 use tauri::{AppHandle, Manager, WebviewWindow};

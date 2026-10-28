@@ -1,4 +1,4 @@
-//! System Telemetry, Global Cursor Tracking, Smart Intellihide & Clipboard Monitor
+﻿//! System Telemetry, Global Cursor Tracking, Smart Intellihide & Clipboard Monitor
 
 use serde::Serialize;
 use std::sync::Mutex;
@@ -41,6 +41,7 @@ static LAST_CPU: Lazy<Mutex<CpuTimes>> = Lazy::new(|| {
 });
 
 static CLIPBOARD_HISTORY: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
+static LAST_SEQ: once_cell::sync::Lazy<std::sync::atomic::AtomicU32> = once_cell::sync::Lazy::new(|| std::sync::atomic::AtomicU32::new(0));
 
 #[cfg(windows)]
 fn filetime_to_u64(ft: FILETIME) -> u64 {
@@ -94,6 +95,12 @@ pub fn sample_cpu_and_ram() -> (f32, f32) {
 #[cfg(windows)]
 pub fn check_clipboard_update() -> Vec<String> {
     unsafe {
+        use windows::Win32::System::DataExchange::GetClipboardSequenceNumber;
+        let seq = GetClipboardSequenceNumber();
+        if LAST_SEQ.swap(seq, std::sync::atomic::Ordering::Relaxed) == seq {
+            return CLIPBOARD_HISTORY.lock().map(|h| h.clone()).unwrap_or_default();
+        }
+
         const CF_UNICODETEXT: u32 = 13;
         if OpenClipboard(None).is_ok() {
             if let Ok(handle) = GetClipboardData(CF_UNICODETEXT) {

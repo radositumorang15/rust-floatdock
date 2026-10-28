@@ -27,6 +27,8 @@ const DockItemComponent: React.FC<DockItemProps> = ({
   onContextMenu,
 }) => {
   const [pressed, setPressed] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const iconSrc = (!imgError && (runningWindow?.icon_url || app.icon_url)) || null;
 
   // Gaussian Continuous Distance-Based Magnification
   // Pitch = 54px (48px item + 6px margin), center is index * 54 + 27
@@ -62,6 +64,7 @@ const DockItemComponent: React.FC<DockItemProps> = ({
       <div
         onMouseDown={() => setPressed(true)}
         onMouseUp={() => setPressed(false)}
+        onMouseLeave={() => setPressed(false)}
         onClick={() => onClick(app, runningWindow)}
         onContextMenu={(e) => {
           e.preventDefault();
@@ -109,13 +112,28 @@ const DockItemComponent: React.FC<DockItemProps> = ({
             zIndex: 1,
           }}
         >
-          <AppIconRenderer
-            iconName={app.icon_name}
-            size={42}
-            theme={theme}
-            parallaxX={parallaxX}
-            parallaxY={parallaxY}
-          />
+          {iconSrc ? (
+            <img
+              src={iconSrc}
+              alt={app.name}
+              onError={() => setImgError(true)}
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '8px',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
+              }}
+            />
+          ) : (
+            <AppIconRenderer
+              iconName={app.icon_name}
+              size={42}
+              theme={theme}
+              parallaxX={parallaxX}
+              parallaxY={parallaxY}
+            />
+          )}
         </div>
 
         {/* Profile Avatar Badge */}

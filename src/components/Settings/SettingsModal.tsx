@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Settings, Eye, Sliders, Palette, Shield, Sparkles, RefreshCw, Wand2, Film } from 'lucide-react';
 import { ThemeConfig, ManaAttribute, MANA_PALETTES } from '../../themes/types';
 import { AVAILABLE_THEMES } from '../../themes/presets';

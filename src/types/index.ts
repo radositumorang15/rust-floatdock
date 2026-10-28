@@ -1,4 +1,4 @@
-export interface TrackedWindow {
+﻿export interface TrackedWindow {
   hwnd: number;
   title: string;
   process_id: number;
