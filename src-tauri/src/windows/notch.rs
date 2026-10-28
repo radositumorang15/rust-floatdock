@@ -19,6 +19,7 @@ pub fn setup_notch_window(window: &WebviewWindow) {
     {
         strip_window_decorations(window);
         make_hwnd_transparent(window);
+        crate::native_actions::set_no_activate(window);
     }
 
     reposition_notch(window, NOTCH_IDLE_WIDTH, NOTCH_IDLE_HEIGHT);

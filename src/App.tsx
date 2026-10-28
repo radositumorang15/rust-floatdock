@@ -105,7 +105,7 @@ export const App: React.FC = () => {
     } catch {}
     return 'dock';
   });
-  const [startMenuOpen, setStartMenuOpen] = useState(true);
+  const [startMenuOpen, setStartMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
@@ -619,7 +619,7 @@ export const App: React.FC = () => {
           <Dock
             state={visibleState}
             theme={currentTheme}
-            onToggleStartMenu={() => setStartMenuOpen((prev) => !prev)}
+            onToggleStartMenu={handleToggleStartMenu}
             onLaunchApp={handleLaunchApp}
             onLaunchAdmin={handleLaunchAdmin}
             onCloseWindow={handleCloseWindow}

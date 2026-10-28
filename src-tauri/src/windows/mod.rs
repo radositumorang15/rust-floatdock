@@ -22,7 +22,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     GWL_EXSTYLE, GWL_STYLE,
     SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE, SWP_NOZORDER,
     WS_BORDER, WS_CAPTION, WS_DLGFRAME, WS_EX_APPWINDOW, WS_EX_CLIENTEDGE,
-    WS_EX_DLGMODALFRAME, WS_EX_NOACTIVATE, WS_EX_STATICEDGE, WS_EX_TOOLWINDOW, WS_EX_WINDOWEDGE,
+    WS_EX_DLGMODALFRAME, WS_EX_STATICEDGE, WS_EX_TOOLWINDOW, WS_EX_WINDOWEDGE,
     WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
 };
 
@@ -83,14 +83,14 @@ pub fn strip_window_decorations(window: &WebviewWindow) {
             style |= WS_POPUP.0;
             SetWindowLongPtrW(hwnd, GWL_STYLE, style as isize);
 
-            // 3. Hapus WS_EX_APPWINDOW dan paksa WS_EX_TOOLWINDOW + WS_EX_NOACTIVATE
+            // 3. Hapus WS_EX_APPWINDOW dan paksa WS_EX_TOOLWINDOW
             let mut ex_style = GetWindowLongPtrW(hwnd, GWL_EXSTYLE) as u32;
             ex_style &= !(WS_EX_DLGMODALFRAME.0
                 | WS_EX_CLIENTEDGE.0
                 | WS_EX_STATICEDGE.0
                 | WS_EX_WINDOWEDGE.0
                 | WS_EX_APPWINDOW.0);
-            ex_style |= WS_EX_TOOLWINDOW.0 | WS_EX_NOACTIVATE.0;
+            ex_style |= WS_EX_TOOLWINDOW.0;
             SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex_style as isize);
 
             // 4. Matikan Non-Client Rendering & Border Windows 11

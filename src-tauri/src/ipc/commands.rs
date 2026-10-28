@@ -415,6 +415,11 @@ pub fn open_task_view() {
 }
 
 #[tauri::command]
+pub fn open_search() {
+    crate::shell_shortcuts::open_search();
+}
+
+#[tauri::command]
 pub fn open_date_time_settings() {
     #[cfg(windows)]
     {

@@ -154,12 +154,12 @@ export const TrayArea: React.FC<TrayProps> = ({
       </div>
 
       {/* 7. Two-line Clock and Date */}
-      <Tooltip text="Klik: Buka Kalender & Notifikasi Windows • Klik Kanan: Pengaturan Waktu">
+      <Tooltip text="Klik: Kalender & Notifikasi Windows • Klik Kanan: Papan Widget Windows">
         <div
           onClick={onOpenCalendar}
           onContextMenu={(e) => {
             e.preventDefault();
-            invoke('open_date_time_settings').catch(() => {});
+            invoke('open_widgets').catch(() => {});
           }}
           style={{
             display: 'flex',

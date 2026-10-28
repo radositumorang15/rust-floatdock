@@ -668,9 +668,9 @@ export const Dock: React.FC<DockProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {/* Search Icon */}
           <div
-            onClick={onToggleStartMenu}
+            onClick={() => invoke('open_search').catch(() => {})}
             className="quick-tool-btn"
-            title="Cari aplikasi dan file"
+            title="Cari aplikasi dan file (Win+S)"
           >
             <Search size={16} />
           </div>
@@ -686,9 +686,9 @@ export const Dock: React.FC<DockProps> = ({
 
           {/* Notification Bell */}
           <div
-            onClick={() => invoke('open_notification_center').catch(() => {})}
+            onClick={onOpenSettings}
             className="quick-tool-btn"
-            title="Pusat Pemberitahuan & Kalender (Win+N)"
+            title="Pusat Pemberitahuan & Pengaturan"
           >
             <Bell size={16} />
           </div>

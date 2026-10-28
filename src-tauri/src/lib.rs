@@ -69,6 +69,7 @@ pub fn run() {
             open_notification_center,
             open_widgets,
             open_task_view,
+            open_search,
             open_date_time_settings,
             toggle_window,
             activate_group

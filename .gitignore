@@ -1,6 +1,8 @@
 # Logs
 logs
 *.log
+stdout.txt
+stderr.txt
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -38,6 +40,8 @@ verify_*.ps1
 run_*.ps1
 list_*.ps1
 *.log
+stdout.txt
+stderr.txt
 
 # Root media duplicate (public/asta-demon.mp4 is tracked)
 asta-demon-black-clover*.mp4
