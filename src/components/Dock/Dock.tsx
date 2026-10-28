@@ -677,18 +677,18 @@ export const Dock: React.FC<DockProps> = ({
 
           {/* Task View Icon */}
           <div
-            onClick={() => onLaunchApp({ id: 'taskview', name: 'Task View', exec_path: '', icon_name: '', is_pinned: false, category: 'Sistem' })}
+            onClick={() => invoke('open_task_view').catch(() => {})}
             className="quick-tool-btn"
-            title="Tampilan Tugas (Task View)"
+            title="Tampilan Tugas (Task View - Win+Tab)"
           >
             <LayoutGrid size={16} />
           </div>
 
           {/* Notification Bell */}
           <div
-            onClick={onOpenSettings}
+            onClick={() => invoke('open_notification_center').catch(() => {})}
             className="quick-tool-btn"
-            title="Pusat Pemberitahuan & Pengaturan"
+            title="Pusat Pemberitahuan & Kalender (Win+N)"
           >
             <Bell size={16} />
           </div>

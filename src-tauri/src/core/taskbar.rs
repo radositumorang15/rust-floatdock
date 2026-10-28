@@ -1,8 +1,8 @@
-﻿//! Windows Taskbar Hide/Restore and Watchdog Spawner
+//! Windows Taskbar Hide/Restore and Watchdog Spawner
 //! Manages Shell_TrayWnd visibility and ensures safety during crash or shutdown.
 
 use std::process::Command;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 #[cfg(windows)]
 use windows::core::w;
@@ -10,10 +10,27 @@ use windows::core::w;
 use windows::Win32::Foundation::HWND;
 #[cfg(windows)]
 use windows::Win32::UI::WindowsAndMessaging::{
-    FindWindowW, IsWindowVisible, ShowWindow, SW_HIDE, SW_SHOW,
+    FindWindowW, GetClassNameW, GetForegroundWindow, IsWindowVisible, ShowWindow, SW_HIDE, SW_SHOW,
 };
 
 static TASKBAR_HIDDEN: AtomicBool = AtomicBool::new(false);
+static PAUSE_UNTIL_MS: AtomicU64 = AtomicU64::new(0);
+
+pub fn pause_taskbar_hiding(duration_ms: u64) {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    PAUSE_UNTIL_MS.store(now + duration_ms, Ordering::SeqCst);
+}
+
+pub fn is_taskbar_pause_active() -> bool {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as u64;
+    now < PAUSE_UNTIL_MS.load(Ordering::SeqCst)
+}
 
 pub fn is_taskbar_hidden() -> bool {
     TASKBAR_HIDDEN.load(Ordering::SeqCst)
@@ -43,7 +60,27 @@ pub fn hide_taskbar() {
 pub fn ensure_taskbar_hidden() {
     #[cfg(windows)]
     if is_taskbar_hidden() {
+        if is_taskbar_pause_active() {
+            return;
+        }
+
         unsafe {
+            // Do not hide while a native Windows Shell flyout (Notification center, Quick Settings, etc.) is in foreground
+            let fg = GetForegroundWindow();
+            if fg != HWND(std::ptr::null_mut()) {
+                let mut class_buf = [0u16; 64];
+                let len = GetClassNameW(fg, &mut class_buf) as usize;
+                if len > 0 {
+                    let class_name = String::from_utf16_lossy(&class_buf[..len]);
+                    if class_name == "Windows.UI.Core.CoreWindow"
+                        || class_name == "Xaml_WindowedPopupClass"
+                        || class_name == "MultitaskingViewFrame"
+                    {
+                        return;
+                    }
+                }
+            }
+
             if let Ok(hwnd) = FindWindowW(w!("Shell_TrayWnd"), None) {
                 if hwnd != HWND(std::ptr::null_mut()) && IsWindowVisible(hwnd).as_bool() {
                     let _ = ShowWindow(hwnd, SW_HIDE);

@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import {
   Wifi,
   WifiOff,
@@ -75,15 +76,26 @@ export const TrayArea: React.FC<TrayProps> = ({
     >
       {/* 1. Battery Icon */}
       <Tooltip text={`Baterai: ${battery.percentage}% ${battery.is_charging ? '(Pengisian)' : ''}`}>
-        <div style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-primary)' }}>
+        <div
+          onClick={onOpenNetwork}
+          style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-primary)' }}
+        >
           {battery.is_charging ? <BatteryCharging size={16} /> : <Battery size={16} />}
         </div>
       </Tooltip>
 
       {/* 2. Volume Icon */}
-      <Tooltip text={`Volume: ${volume.level}% ${volume.is_muted ? '(Mute)' : ''}`}>
+      <Tooltip text={`Volume: ${volume.level}% ${volume.is_muted ? '(Mute)' : ''} • Scroll: Atur • Klik: Quick Settings • Klik Kanan/Double: Mute`}>
         <div
-          onClick={onToggleMute}
+          onClick={onOpenNetwork}
+          onDoubleClick={onToggleMute}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            onToggleMute();
+          }}
+          onAuxClick={(e) => {
+            if (e.button === 1) onToggleMute();
+          }}
           onWheel={handleVolumeWheel}
           style={{
             cursor: 'pointer',
@@ -142,24 +154,30 @@ export const TrayArea: React.FC<TrayProps> = ({
       </div>
 
       {/* 7. Two-line Clock and Date */}
-      <div
-        onClick={onOpenCalendar}
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          lineHeight: 1.15,
-        }}
-      >
-        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
-          {timeStr}
-        </span>
-        <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-secondary)' }}>
-          {dateStr}
-        </span>
-      </div>
+      <Tooltip text="Klik: Buka Kalender & Notifikasi Windows • Klik Kanan: Pengaturan Waktu">
+        <div
+          onClick={onOpenCalendar}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            invoke('open_date_time_settings').catch(() => {});
+          }}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            lineHeight: 1.15,
+          }}
+        >
+          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+            {timeStr}
+          </span>
+          <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+            {dateStr}
+          </span>
+        </div>
+      </Tooltip>
     </div>
   );
 };

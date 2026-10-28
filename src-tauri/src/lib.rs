@@ -67,6 +67,9 @@ pub fn run() {
             open_native_start,
             open_quick_settings,
             open_notification_center,
+            open_widgets,
+            open_task_view,
+            open_date_time_settings,
             toggle_window,
             activate_group
         ])

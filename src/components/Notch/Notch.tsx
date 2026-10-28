@@ -36,7 +36,7 @@ type View = 'toast' | 'alert' | 'expanded' | 'hover' | 'idle';
 
 /* ───────────────────────── Konstanta ───────────────────────── */
 
-const IDLE_W = 132;          // sinkron dengan NOTCH_IDLE_WIDTH di notch.rs
+const IDLE_W = 124;          // sinkron dengan NOTCH_IDLE_WIDTH di notch.rs
 const ACTIVITY_W = 188;      // idle + live activity (timer / musik / file)
 const IDLE_H = 36;           // sinkron dengan NOTCH_IDLE_HEIGHT di notch.rs
 const HOVER_H = 42;
@@ -643,7 +643,7 @@ export const Notch: React.FC<NotchProps> = ({ timer, media, theme, onTogglePlayb
   return (
     <div className="nx-root" style={{ '--nx-accent': accentColor } as React.CSSProperties}>
       <div
-        className="nx-island"
+        className={`nx-island ${view === 'expanded' ? 'expanded' : ''}`}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
         onDragEnter={onDragEnter}

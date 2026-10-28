@@ -4,53 +4,65 @@
 //!   Start menu          -> tap tombol Win
 //!   Quick Settings      -> Win + A   (Wi-Fi, volume, baterai, kecerahan; Windows 11)
 //!   Notification Center -> Win + N   (notifikasi + kalender; Windows 11)
-//!
-//! Cargo (crate `windows`): feature "Win32_UI_Input_KeyboardAndMouse"
+//!   Widgets             -> Win + W   (papan widget; Windows 11)
 
 #[cfg(windows)]
 use windows::Win32::UI::Input::KeyboardAndMouse::{
-    SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP,
-    VIRTUAL_KEY, VK_LWIN,
+    keybd_event, KEYBD_EVENT_FLAGS, KEYEVENTF_EXTENDEDKEY, KEYEVENTF_KEYUP,
 };
 
-#[cfg(windows)]
-fn key_event(vk: VIRTUAL_KEY, up: bool) -> INPUT {
-    INPUT {
-        r#type: INPUT_KEYBOARD,
-        Anonymous: INPUT_0 {
-            ki: KEYBDINPUT {
-                wVk: vk,
-                wScan: 0,
-                dwFlags: if up { KEYEVENTF_KEYUP } else { KEYBD_EVENT_FLAGS(0) },
-                time: 0,
-                dwExtraInfo: 0,
-            },
-        },
-    }
-}
+pub fn send_hotkey(keys: &[u8]) {
+    #[cfg(windows)]
+    {
+        // Beri jeda 2 detik pada taskbar hider agar explorer tidak menutup flyout
+        crate::core::taskbar::pause_taskbar_hiding(2000);
+        let keys = keys.to_vec();
+        std::thread::spawn(move || {
+            unsafe {
+                // Tekan tombol berurutan
+                for &k in &keys {
+                    let mut flags = 0;
+                    if k == 0x5B || k == 0x5C {
+                        flags |= KEYEVENTF_EXTENDEDKEY.0;
+                    }
+                    keybd_event(k, 0, KEYBD_EVENT_FLAGS(flags), 0);
+                    std::thread::sleep(std::time::Duration::from_millis(30));
+                }
 
-/// Tekan semua tombol berurutan, lalu lepas dengan urutan terbalik.
-#[cfg(windows)]
-fn send_chord(keys: &[VIRTUAL_KEY]) {
-    let mut inputs: Vec<INPUT> = keys.iter().map(|&k| key_event(k, false)).collect();
-    inputs.extend(keys.iter().rev().map(|&k| key_event(k, true)));
-    unsafe {
-        SendInput(&inputs, std::mem::size_of::<INPUT>() as i32);
+                // Beri waktu bagi shell untuk mendeteksi chord
+                std::thread::sleep(std::time::Duration::from_millis(50));
+
+                // Lepas tombol secara terbalik
+                for &k in keys.iter().rev() {
+                    let mut flags = KEYEVENTF_KEYUP.0;
+                    if k == 0x5B || k == 0x5C {
+                        flags |= KEYEVENTF_EXTENDEDKEY.0;
+                    }
+                    keybd_event(k, 0, KEYBD_EVENT_FLAGS(flags), 0);
+                    std::thread::sleep(std::time::Duration::from_millis(25));
+                }
+            }
+        });
     }
 }
 
 pub fn open_start() {
-    #[cfg(windows)]
-    send_chord(&[VK_LWIN]);
+    send_hotkey(&[0x5B]);
 }
 
 pub fn open_quick_settings() {
-    #[cfg(windows)]
-    send_chord(&[VK_LWIN, VIRTUAL_KEY(0x41)]); // 'A'
+    send_hotkey(&[0x5B, 0x41]); // Win + A
 }
 
 pub fn open_notification_center() {
-    #[cfg(windows)]
-    send_chord(&[VK_LWIN, VIRTUAL_KEY(0x4E)]); // 'N'
+    send_hotkey(&[0x5B, 0x4E]); // Win + N
+}
+
+pub fn open_widgets() {
+    send_hotkey(&[0x5B, 0x57]); // Win + W
+}
+
+pub fn open_task_view() {
+    send_hotkey(&[0x5B, 0x09]); // Win + Tab
 }
 

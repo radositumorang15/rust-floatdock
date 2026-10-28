@@ -405,6 +405,27 @@ pub fn open_notification_center() {
 }
 
 #[tauri::command]
+pub fn open_widgets() {
+    crate::shell_shortcuts::open_widgets();
+}
+
+#[tauri::command]
+pub fn open_task_view() {
+    crate::shell_shortcuts::open_task_view();
+}
+
+#[tauri::command]
+pub fn open_date_time_settings() {
+    #[cfg(windows)]
+    {
+        use std::process::Command;
+        let _ = Command::new("cmd")
+            .args(["/c", "start", "ms-settings:dateandtime"])
+            .spawn();
+    }
+}
+
+#[tauri::command]
 pub fn toggle_window(hwnd: isize) -> String {
     crate::native_actions::toggle_window(hwnd).to_string()
 }
