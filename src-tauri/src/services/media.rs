@@ -24,6 +24,12 @@ pub struct MediaState {
 static MEDIA_CACHE: Lazy<Mutex<Option<MediaState>>> = Lazy::new(|| Mutex::new(None));
 static GSMTC_CACHE: Lazy<Mutex<Option<MediaState>>> = Lazy::new(|| Mutex::new(None));
 
+pub fn update_gsmtc_cache(state: Option<MediaState>) {
+    if let Ok(mut cache) = GSMTC_CACHE.lock() {
+        *cache = state;
+    }
+}
+
 #[cfg(windows)]
 pub fn send_media_key(vk: u8) {
     unsafe {
@@ -47,10 +53,10 @@ pub async fn poll_system_media() -> Option<MediaState> {
         let async_mgr = GlobalSystemMediaTransportControlsSessionManager::RequestAsync().ok()?;
         let manager = async_mgr.await.ok()?;
 
-        let session: Option<GlobalSystemMediaTransportControlsSession> = if let Ok(s) = manager.GetCurrentSession() {
-            Some(s)
-        } else if let Ok(sessions) = manager.GetSessions() {
-            let mut candidate = None;
+        let mut candidate: Option<GlobalSystemMediaTransportControlsSession> = None;
+
+        // 1. Cek GetSessions: prioritaskan sesi yang statusnya aktif Playing
+        if let Ok(sessions) = manager.GetSessions() {
             if let Ok(count) = sessions.Size() {
                 for i in 0..count {
                     if let Ok(s) = sessions.GetAt(i) {
@@ -62,16 +68,29 @@ pub async fn poll_system_media() -> Option<MediaState> {
                                 }
                             }
                         }
-                        if candidate.is_none() {
+                    }
+                }
+
+                // Jika tidak ada yang Playing, ambil sesi pertama yang valid
+                if candidate.is_none() && count > 0 {
+                    for i in 0..count {
+                        if let Ok(s) = sessions.GetAt(i) {
                             candidate = Some(s);
+                            break;
                         }
                     }
                 }
             }
-            candidate
-        } else {
-            None
-        };
+        }
+
+        // 2. Fallback ke GetCurrentSession jika sessions kosong
+        if candidate.is_none() {
+            if let Ok(s) = manager.GetCurrentSession() {
+                candidate = Some(s);
+            }
+        }
+
+        let session = candidate;
 
         let session = session?;
 
@@ -255,7 +274,7 @@ pub fn poll_media_from_windows() -> Option<MediaState> {
 
 /// Resolves current media state using hybrid detection (GSMTC + Window Title + WASAPI Peak)
 pub async fn get_media_state() -> MediaState {
-    // 1. Check GSMTC cache
+    // 1. Check GSMTC cache (hasil update real-time dari background worker)
     if let Ok(cache) = GSMTC_CACHE.lock() {
         if let Some(ref gsmtc) = *cache {
             if gsmtc.has_media && (gsmtc.is_playing || !gsmtc.title.is_empty()) {
@@ -267,7 +286,21 @@ pub async fn get_media_state() -> MediaState {
         }
     }
 
-    // 2. Check Window & Audio scanner
+    // 1b. Polling GSMTC langsung jika cache belum terisi
+    #[cfg(windows)]
+    {
+        if let Some(gsmtc) = poll_system_media().await {
+            if gsmtc.has_media && (gsmtc.is_playing || !gsmtc.title.is_empty()) {
+                update_gsmtc_cache(Some(gsmtc.clone()));
+                if let Ok(mut c) = MEDIA_CACHE.lock() {
+                    *c = Some(gsmtc.clone());
+                }
+                return gsmtc;
+            }
+        }
+    }
+
+    // 2. Check Window & Audio scanner (Spotify, YouTube di browser, VLC, Apple Music)
     if let Some(win_media) = poll_media_from_windows() {
         if let Ok(mut c) = MEDIA_CACHE.lock() {
             *c = Some(win_media.clone());
@@ -280,7 +313,7 @@ pub async fn get_media_state() -> MediaState {
         if let Some(ref st) = *cache {
             let mut st_out = st.clone();
             let audio_peak = crate::services::hardware_audio::get_last_audio_peak();
-            st_out.is_playing = audio_peak > 0.005;
+            st_out.is_playing = audio_peak > 0.001;
             return st_out;
         }
     }

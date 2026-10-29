@@ -18,7 +18,9 @@ export const SettingsModal: React.FC<SettingsProps> = ({
   onClose,
   onToggleTaskbar,
 }) => {
-  const [iconSize, setIconSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [sizeMode, setSizeMode] = useState<'auto' | 'small' | 'medium' | 'large'>(() => {
+    return (localStorage.getItem('floatdock_size_mode') as any) || 'auto';
+  });
   const [magnification, setMagnification] = useState(true);
   const [autoHide, setAutoHide] = useState(() => {
     return localStorage.getItem('floatdock_autohide') === 'true';
@@ -218,32 +220,44 @@ export const SettingsModal: React.FC<SettingsProps> = ({
             </div>
           )}
 
-          {/* 3. Icon Size */}
+          {/* 3. Dock Size Mode */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Sliders size={18} color="var(--text-secondary)" />
               <div>
-                <div style={{ fontSize: '14px', fontWeight: 600 }}>Ukuran Ikon Dock</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Kecil (40px), Sedang (48px), Besar (56px)</div>
+                <div style={{ fontSize: '14px', fontWeight: 600 }}>Ukuran & Skala Dock</div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  Kecil (Laptop/768p), Sedang (1080p), Besar (2K/4K), atau Otomatis
+                </div>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '6px' }}>
-              {(['small', 'medium', 'large'] as const).map((s) => (
+              {([
+                { id: 'auto', label: 'Otomatis' },
+                { id: 'small', label: 'Kecil' },
+                { id: 'medium', label: 'Sedang' },
+                { id: 'large', label: 'Besar' },
+              ] as const).map(({ id, label }) => (
                 <button
-                  key={s}
-                  onClick={() => setIconSize(s)}
+                  key={id}
+                  onClick={() => {
+                    setSizeMode(id);
+                    localStorage.setItem('floatdock_size_mode', id);
+                    window.dispatchEvent(new Event('storage'));
+                  }}
                   style={{
-                    background: iconSize === s ? currentTheme.accent : 'rgba(255,255,255,0.12)',
-                    color: iconSize === s ? '#0B1C14' : '#FFFFFF',
+                    background: sizeMode === id ? currentTheme.accent : 'rgba(255,255,255,0.12)',
+                    color: sizeMode === id ? '#0B1C14' : '#FFFFFF',
                     border: 'none',
                     borderRadius: '6px',
                     padding: '4px 10px',
                     fontSize: '12px',
                     fontWeight: 600,
                     cursor: 'pointer',
+                    transition: 'all 120ms ease',
                   }}
                 >
-                  {s === 'small' ? '40px' : s === 'medium' ? '48px' : '56px'}
+                  {label}
                 </button>
               ))}
             </div>
@@ -343,7 +357,9 @@ export const SettingsModal: React.FC<SettingsProps> = ({
         >
           <button
             onClick={() => {
-              setIconSize('medium');
+              setSizeMode('auto');
+              localStorage.setItem('floatdock_size_mode', 'auto');
+              window.dispatchEvent(new Event('storage'));
               setMagnification(true);
               setAutoHide(false);
               handleSelectTheme('liquid-glass');

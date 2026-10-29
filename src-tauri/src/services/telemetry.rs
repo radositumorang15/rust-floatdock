@@ -27,6 +27,7 @@ pub struct SystemPulse {
     pub ram_usage: f32,
     pub should_autohide_dock: bool,
     pub cursor_near_bottom: bool,
+    pub cursor_at_bottom_edge: bool,
     pub recent_clips: Vec<String>,
 }
 
@@ -157,7 +158,9 @@ pub fn get_system_pulse(dock_hwnd_val: isize) -> SystemPulse {
         let center_x = screen_w / 2.0;
         let norm_x = ((pt.x as f64 - center_x) / (screen_w / 2.0)).clamp(-1.0, 1.0);
         let norm_y = (pt.y as f64 / screen_h).clamp(0.0, 1.0);
-        let cursor_near_bottom = (pt.y as f64) >= (screen_h - 130.0);
+        // Zona dock (78px dari bawah) dan zona trigger unhide tepi bawah (14px dari bawah)
+        let cursor_near_bottom = (pt.y as f64) >= (screen_h - 78.0);
+        let cursor_at_bottom_edge = (pt.y as f64) >= (screen_h - 14.0);
 
         // 2. Smart Intellihide: Cek apakah jendela aktif menutupi area Dock (84px bawah)
         let fg_hwnd = GetForegroundWindow();
@@ -188,6 +191,7 @@ pub fn get_system_pulse(dock_hwnd_val: isize) -> SystemPulse {
             ram_usage,
             should_autohide_dock,
             cursor_near_bottom,
+            cursor_at_bottom_edge,
             recent_clips,
         }
     }

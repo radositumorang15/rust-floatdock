@@ -48,6 +48,7 @@ pub fn run() {
             toggle_volume_mute,
             get_indexed_apps,
             search_start_apps,
+            get_media_state,
             toggle_media_playback,
             resize_notch,
             resize_dock,
@@ -124,6 +125,11 @@ pub fn run() {
                 };
                 loop {
                     tokio::time::sleep(Duration::from_millis(400)).await;
+                    #[cfg(windows)]
+                    {
+                        let gsmtc = crate::services::media::poll_system_media().await;
+                        crate::services::media::update_gsmtc_cache(gsmtc);
+                    }
                     let current = crate::services::media::get_media_state().await;
                     if current != last_state {
                         last_state = current.clone();

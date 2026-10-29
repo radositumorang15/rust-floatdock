@@ -15,11 +15,17 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ menu, onClose }) => {
         onClose();
       }
     };
+    const handleBlur = () => {
+      onClose();
+    };
+
     if (menu.visible) {
       window.addEventListener('mousedown', handleClickOutside);
+      window.addEventListener('blur', handleBlur);
     }
     return () => {
       window.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('blur', handleBlur);
     };
   }, [menu.visible, onClose]);
 

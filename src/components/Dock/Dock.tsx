@@ -135,8 +135,63 @@ export const Dock: React.FC<DockProps> = ({
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
+  // Dock Size Mode: 'auto' | 'small' | 'medium' | 'large'
+  const [sizeMode, setSizeMode] = useState<'auto' | 'small' | 'medium' | 'large'>(() => {
+    return (localStorage.getItem('floatdock_size_mode') as any) || 'auto';
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      const saved = localStorage.getItem('floatdock_size_mode');
+      if (saved) setSizeMode(saved as any);
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const effectiveSize: 'small' | 'medium' | 'large' = useMemo(() => {
+    if (sizeMode !== 'auto') return sizeMode;
+    if (typeof window !== 'undefined') {
+      const h = window.screen.height;
+      const w = window.screen.width;
+      // Laptop dengan layar 768p atau resolusi scaled (tinggi <= 820px atau lebar <= 1400px)
+      if (h <= 820 || w <= 1400) return 'small';
+      if (h <= 1080) return 'medium';
+      return 'large';
+    }
+    return 'medium';
+  }, [sizeMode]);
+
+  const idleHeight = effectiveSize === 'small' ? 54 : effectiveSize === 'medium' ? 64 : 76;
+
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
+    x: 0,
+    y: 0,
+    visible: false,
+    items: [],
+  });
+
+  // Tutup menu klik kanan segera saat window kehilangan fokus (misal user klik app lain)
+  useEffect(() => {
+    const handleBlur = () => {
+      setContextMenu((prev) => (prev.visible ? { ...prev, visible: false } : prev));
+      setPreviewOpen(false);
+    };
+    window.addEventListener('blur', handleBlur);
+    return () => window.removeEventListener('blur', handleBlur);
+  }, []);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const isExpanded = Boolean(previewOpen || contextMenu.visible);
+
+  const isDockActive = isDockHovered || isExpanded;
+
   const shouldHide = Boolean(
-    autoHideEnabled && pulse?.should_autohide_dock && !pulse?.cursor_near_bottom && !isDockHovered
+    autoHideEnabled &&
+    !isExpanded &&
+    pulse?.should_autohide_dock &&
+    !(debouncedHidden ? pulse?.cursor_at_bottom_edge : (pulse?.cursor_near_bottom || pulse?.cursor_at_bottom_edge)) &&
+    !isDockActive
   );
 
   useEffect(() => {
@@ -151,7 +206,7 @@ export const Dock: React.FC<DockProps> = ({
         hideTimerRef.current = window.setTimeout(() => {
           setDebouncedHidden(true);
           hideTimerRef.current = null;
-        }, 500); // 500ms delay so moving cursor to tab or icons never hides
+        }, 220); // 220ms responsif (cepat & mulus tanpa memblokir klik aplikasi)
       }
     }
     return () => {
@@ -323,27 +378,43 @@ export const Dock: React.FC<DockProps> = ({
     return list;
   }, [state.pinned_apps, state.running_windows]);
 
-  const [contextMenu, setContextMenu] = useState<ContextMenuState>({
-    x: 0,
-    y: 0,
-    visible: false,
-    items: [],
-  });
 
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const isExpanded = Boolean(previewOpen || contextMenu.visible);
+
+  const dockContainerRef = useRef<HTMLDivElement>(null);
+  const [dockWidth, setDockWidth] = useState<number>(760);
 
   useEffect(() => {
-    let timeout: number | undefined;
-    if (isExpanded) {
-      invoke('resize_dock', { expanded: true, hidden: debouncedHidden }).catch(() => {});
-    } else {
-      timeout = window.setTimeout(() => {
-        invoke('resize_dock', { expanded: false, hidden: debouncedHidden }).catch(() => {});
-      }, 200);
-    }
-    return () => clearTimeout(timeout);
-  }, [isExpanded, debouncedHidden]);
+    const el = dockContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = Math.ceil(entry.contentRect.width);
+        if (w > 100) {
+          setDockWidth(w);
+        }
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+
+
+  useEffect(() => {
+    // Ukuran expanded yang kompak & proporsional sesuai kartu preview (TIDAK memakan setengah layar!)
+    const expandedHeight = effectiveSize === 'small' ? 190 : effectiveSize === 'medium' ? 230 : 270;
+    const extraWidth = effectiveSize === 'small' ? 80 : 140;
+    const targetW = isExpanded ? dockWidth + extraWidth : dockWidth + 20;
+    const targetH = isExpanded ? expandedHeight : idleHeight;
+
+    // Resizing seketika (0ms) baik saat membesar maupun menciut agar area atas langsung bebas diklik
+    invoke('resize_dock', {
+      width: targetW,
+      height: targetH,
+      expanded: isExpanded,
+      hidden: debouncedHidden,
+    }).catch(() => {});
+  }, [isExpanded, debouncedHidden, dockWidth, idleHeight, effectiveSize]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (iconStripRef.current) {
@@ -413,6 +484,30 @@ export const Dock: React.FC<DockProps> = ({
       {
         label: `🔆 Opacity: [${Math.round(videoOpacity * 100)}%]`,
         action: cycleOpacity,
+      }
+    );
+
+    const cycleSizeMode = () => {
+      const order: Array<'auto' | 'small' | 'medium' | 'large'> = ['auto', 'small', 'medium', 'large'];
+      const nextIdx = (order.indexOf(sizeMode) + 1) % order.length;
+      const next = order[nextIdx];
+      setSizeMode(next);
+      localStorage.setItem('floatdock_size_mode', next);
+      window.dispatchEvent(new Event('storage'));
+    };
+
+    const sizeLabels: Record<'auto' | 'small' | 'medium' | 'large', string> = {
+      auto: `🌐 Ukuran Dock: [Otomatis (${effectiveSize === 'small' ? 'Kecil' : effectiveSize === 'medium' ? 'Sedang' : 'Besar'})]`,
+      small: '📱 Ukuran Dock: [Kecil (Laptop / 768p)]',
+      medium: '💻 Ukuran Dock: [Sedang (Standar 1080p)]',
+      large: '🖥️ Ukuran Dock: [Besar (Monitor 2K / 4K)]',
+    };
+
+    items.push(
+      { label: '---', action: () => {} },
+      {
+        label: sizeLabels[sizeMode],
+        action: cycleSizeMode,
       }
     );
 
@@ -486,6 +581,10 @@ export const Dock: React.FC<DockProps> = ({
   const isLight = theme?.mode === 'light';
   const isVideoAllowed = videoBgEnabled;
 
+  const startIconSize = effectiveSize === 'small' ? 17 : effectiveSize === 'medium' ? 19 : 22;
+  const toolIconSize = effectiveSize === 'small' ? 13 : effectiveSize === 'medium' ? 15 : 16;
+  const dividerHeight = effectiveSize === 'small' ? '16px' : effectiveSize === 'medium' ? '20px' : '24px';
+
   const tintStart = theme?.tints?.start || 'var(--tint-start)';
   const tintApps = theme?.tints?.apps || 'var(--tint-apps)';
   const tintInfo = theme?.tints?.info || 'var(--tint-info)';
@@ -494,7 +593,8 @@ export const Dock: React.FC<DockProps> = ({
 
   return (
     <div
-      className="segmented-dock-container"
+      ref={dockContainerRef}
+      className={`segmented-dock-container size-${effectiveSize}`}
       onMouseEnter={() => setIsDockHovered(true)}
       onMouseLeave={() => setIsDockHovered(false)}
       style={{
@@ -539,9 +639,9 @@ export const Dock: React.FC<DockProps> = ({
         </div>
         <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           {isGrimoire && theme?.startMenu?.cloverMotif ? (
-            <GeometricClover size={22} color={accentColor} />
+            <GeometricClover size={startIconSize} color={accentColor} />
           ) : (
-            <Windows11Logo size={22} color={isLight ? '#0F172A' : '#FFFFFF'} />
+            <Windows11Logo size={startIconSize} color={isLight ? '#0F172A' : '#FFFFFF'} />
           )}
         </div>
       </div>
@@ -612,9 +712,12 @@ export const Dock: React.FC<DockProps> = ({
             items={dockItems}
             theme={theme}
             accentColor={accentColor}
+            sizeMode={effectiveSize}
             onPreviewHoverChange={(open) => {
               setPreviewOpen(open);
-              setIsDockHovered(open);
+              if (open) {
+                setIsDockHovered(true);
+              }
             }}
             onFocusWindow={(hwnd) => invoke('focus_window', { hwnd }).catch(() => {})}
             onCloseWindow={(hwnd) => onCloseWindow(hwnd)}
@@ -658,7 +761,7 @@ export const Dock: React.FC<DockProps> = ({
         <div
           style={{
             width: '1px',
-            height: '24px',
+            height: dividerHeight,
             background: 'rgba(255, 255, 255, 0.22)',
             margin: '0 4px',
           }}
@@ -672,7 +775,7 @@ export const Dock: React.FC<DockProps> = ({
             className="quick-tool-btn"
             title="Cari aplikasi dan file (Win+S)"
           >
-            <Search size={16} />
+            <Search size={toolIconSize} />
           </div>
 
           {/* Task View Icon */}
@@ -681,7 +784,7 @@ export const Dock: React.FC<DockProps> = ({
             className="quick-tool-btn"
             title="Tampilan Tugas (Task View - Win+Tab)"
           >
-            <LayoutGrid size={16} />
+            <LayoutGrid size={toolIconSize} />
           </div>
 
           {/* Notification Bell */}
@@ -690,7 +793,7 @@ export const Dock: React.FC<DockProps> = ({
             className="quick-tool-btn"
             title="Pusat Pemberitahuan & Pengaturan"
           >
-            <Bell size={16} />
+            <Bell size={toolIconSize} />
           </div>
         </div>
         </div>
@@ -734,6 +837,7 @@ export const Dock: React.FC<DockProps> = ({
             volume={state.volume}
             network={state.network}
             weather={state.weather}
+            sizeMode={effectiveSize}
             onOpenNetwork={onOpenNetwork}
             onStepVolume={onStepVolume}
             onToggleMute={onToggleMute}

@@ -94,6 +94,7 @@ export interface SystemPulse {
   ram_usage: number;
   should_autohide_dock: boolean;
   cursor_near_bottom: boolean;
+  cursor_at_bottom_edge?: boolean;
   recent_clips: string[];
 }
 

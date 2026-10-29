@@ -1,14 +1,14 @@
 //! Dock Window Management
-//! Handles bottom floating placement, screen metrics, dynamic height adjustment, and transparency.
+//! Handles bottom floating placement, screen metrics, dynamic width/height adjustment, and transparency.
 
 use tauri::WebviewWindow;
 
 #[cfg(windows)]
 use super::{make_hwnd_transparent, strip_window_decorations};
 
-pub const DOCK_WINDOW_WIDTH: f64 = 1680.0;
-pub const DOCK_IDLE_HEIGHT: f64 = 100.0;
-pub const DOCK_EXPANDED_HEIGHT: f64 = 480.0;
+pub const DOCK_DEFAULT_WIDTH: f64 = 760.0;
+pub const DOCK_IDLE_HEIGHT: f64 = 76.0;
+pub const DOCK_EXPANDED_HEIGHT: f64 = 220.0;
 pub const DOCK_BAR_HEIGHT: f64 = 60.0;
 pub const DOCK_BOTTOM_OFFSET: f64 = 14.0;
 
@@ -18,7 +18,7 @@ pub fn setup_dock_window(window: &WebviewWindow) {
     let _ = window.set_always_on_top(true);
     let _ = window.set_shadow(false);
 
-    reposition_dock(window, DOCK_IDLE_HEIGHT);
+    reposition_dock(window, DOCK_DEFAULT_WIDTH, DOCK_IDLE_HEIGHT);
 
     #[cfg(windows)]
     {
@@ -30,14 +30,20 @@ pub fn setup_dock_window(window: &WebviewWindow) {
     let _ = window.show();
 }
 
-pub fn reposition_dock(window: &WebviewWindow, height: f64) {
-    if let Ok(Some(monitor)) = window.primary_monitor() {
+pub fn reposition_dock(window: &WebviewWindow, width: f64, height: f64) {
+    let monitor = window
+        .current_monitor()
+        .ok()
+        .flatten()
+        .or_else(|| window.primary_monitor().ok().flatten());
+
+    if let Some(monitor) = monitor {
         let scale = monitor.scale_factor();
         let mon_size = monitor.size();
         let screen_w = mon_size.width as f64 / scale;
         let screen_h = mon_size.height as f64 / scale;
 
-        let win_w = DOCK_WINDOW_WIDTH.min(screen_w - 16.0);
+        let win_w = width.min(screen_w - 16.0).max(200.0);
         let x = ((screen_w - win_w) / 2.0).max(0.0);
         let y = (screen_h - height).max(0.0);
 

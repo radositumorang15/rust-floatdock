@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Layers, Plus, Globe, User } from 'lucide-react';
 import { WindowInstance, ChromeProfileEntry } from '../../types';
 import { invoke } from '@tauri-apps/api/core';
@@ -10,10 +10,12 @@ interface DockAppPreviewProps {
   profileBadge?: string;
   windows: WindowInstance[];
   accentColor?: string;
+  sizeMode?: 'small' | 'medium' | 'large';
   onFocusWindow: (hwnd: number) => void;
   onCloseWindow: (hwnd: number) => void;
   onLaunchNewInstance: () => void;
   onPreviewHoverChange?: (open: boolean) => void;
+  isAnyPreviewOpen?: boolean;
   children?: React.ReactNode;
 }
 
@@ -23,14 +25,78 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
   profileBadge,
   windows,
   accentColor = '#38BDF8',
+  sizeMode = 'medium',
   onFocusWindow,
   onCloseWindow,
   onLaunchNewInstance,
   onPreviewHoverChange,
+  isAnyPreviewOpen = false,
   children,
 }) => {
   const [hovered, setHovered] = useState(false);
   const [chromeProfiles, setChromeProfiles] = useState<ChromeProfileEntry[]>([]);
+  const enterTimerRef = useRef<number | null>(null);
+  const leaveTimerRef = useRef<number | null>(null);
+
+  const cancelTimers = () => {
+    if (enterTimerRef.current) {
+      clearTimeout(enterTimerRef.current);
+      enterTimerRef.current = null;
+    }
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+  };
+
+  const dismissPreview = () => {
+    cancelTimers();
+    setHovered(false);
+    onPreviewHoverChange?.(false);
+  };
+
+  useEffect(() => {
+    return () => cancelTimers();
+  }, []);
+
+  const handleMouseEnter = () => {
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+
+    if (!hovered) {
+      if (enterTimerRef.current) {
+        clearTimeout(enterTimerRef.current);
+      }
+      // Jika preview lain sedang terbuka, switch seketika (0ms). Jika belum ada preview, beri delay 120ms
+      const delay = isAnyPreviewOpen ? 0 : 120;
+      if (delay === 0) {
+        setHovered(true);
+      } else {
+        enterTimerRef.current = window.setTimeout(() => {
+          setHovered(true);
+          enterTimerRef.current = null;
+        }, delay);
+      }
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (enterTimerRef.current) {
+      clearTimeout(enterTimerRef.current);
+      enterTimerRef.current = null;
+    }
+
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+    }
+    // Grace period 220ms agar kursor dapat bergerak mulus antara ikon dock dan kartu preview tanpa flickering
+    leaveTimerRef.current = window.setTimeout(() => {
+      setHovered(false);
+      leaveTimerRef.current = null;
+    }, 220);
+  };
 
   const isChrome =
     appName.toLowerCase().includes('chrome') ||
@@ -44,7 +110,7 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
   }, [hovered, hasOverlayContent, onPreviewHoverChange]);
 
   useEffect(() => {
-    if (hovered && isChrome) {
+    if (hovered && isChrome && chromeProfiles.length === 0) {
       invoke<ChromeProfileEntry[]>('get_available_chrome_profiles')
         .then((res) => {
           if (Array.isArray(res)) {
@@ -69,8 +135,8 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
 
   return (
     <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       onMouseDown={handleMouseDown}
       style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
     >
@@ -78,28 +144,43 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
       {hovered && hasOverlayContent && (
         <div
           onClick={(e) => e.stopPropagation()}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          className="dock-preview-card"
           style={{
             position: 'absolute',
-            bottom: '58px',
+            bottom: sizeMode === 'small' ? '46px' : sizeMode === 'medium' ? '54px' : '62px',
             left: '50%',
             transform: 'translateX(-50%)',
             background: 'rgba(11, 15, 25, 0.96)',
             border: '1px solid rgba(255, 255, 255, 0.16)',
-            borderRadius: '16px',
-            padding: '10px 12px',
-            minWidth: '260px',
-            maxWidth: '380px',
-            maxHeight: '400px',
+            borderRadius: '14px',
+            padding: sizeMode === 'small' ? '8px 10px' : '10px 12px',
+            minWidth: '230px',
+            maxWidth: '340px',
+            maxHeight: sizeMode === 'small' ? '135px' : sizeMode === 'medium' ? '165px' : '195px',
             width: 'max-content',
             display: 'flex',
             flexDirection: 'column',
-            gap: '8px',
+            gap: '6px',
             zIndex: 9999,
             boxShadow: '0 16px 36px rgba(0, 0, 0, 0.65)',
             backdropFilter: 'blur(20px)',
             pointerEvents: 'auto',
           }}
         >
+          {/* Hit Bridge: Menutup celah antara ikon dock dan kartu preview agar mouse tidak keluar */}
+          <div
+            style={{
+              position: 'absolute',
+              bottom: '-28px',
+              left: '-30px',
+              right: '-30px',
+              height: '36px',
+              background: 'transparent',
+              pointerEvents: 'auto',
+            }}
+          />
           {/* HEADER APLIKASI */}
           <div
             style={{
@@ -151,7 +232,7 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '5px',
-                maxHeight: isChrome && chromeProfiles.length > 0 ? '190px' : '280px',
+                maxHeight: isChrome && chromeProfiles.length > 0 ? (sizeMode === 'small' ? '65px' : '100px') : (sizeMode === 'small' ? '85px' : '125px'),
                 overflowY: 'auto',
                 scrollbarWidth: 'thin',
                 paddingRight: '2px',
@@ -160,7 +241,7 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
               {windows.map((win) => (
                 <div
                   key={win.hwnd}
-                  onClick={() => onFocusWindow(win.hwnd)}
+                  onClick={() => { dismissPreview(); onFocusWindow(win.hwnd); }}
                   title={win.title}
                   style={{
                     display: 'flex',
@@ -209,6 +290,9 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (windows.length <= 1) {
+                        dismissPreview();
+                      }
                       onCloseWindow(win.hwnd);
                     }}
                     title="Tutup Jendela"
@@ -274,7 +358,7 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
                 {chromeProfiles.slice(0, 12).map((prof) => (
                   <button
                     key={prof.dir}
-                    onClick={() => handleLaunchProfile(prof.dir)}
+                    onClick={() => { dismissPreview(); handleLaunchProfile(prof.dir); }}
                     title={`Buka Chrome dengan profil ${prof.name}`}
                     style={{
                       background: 'rgba(255, 255, 255, 0.09)',
@@ -311,6 +395,7 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
       {/* IKON APLIKASI DI DOCK */}
       <div
         onClick={(e) => {
+          dismissPreview();
           if (e.shiftKey) {
             onLaunchNewInstance();
             return;
@@ -324,15 +409,15 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
           }
         }}
         style={{
-          width: '46px',
-          height: '46px',
-          borderRadius: '12px',
+          width: sizeMode === 'small' ? '34px' : sizeMode === 'medium' ? '38px' : '44px',
+          height: sizeMode === 'small' ? '34px' : sizeMode === 'medium' ? '38px' : '44px',
+          borderRadius: sizeMode === 'small' ? '8px' : sizeMode === 'medium' ? '10px' : '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
           cursor: 'pointer',
-          transform: hovered ? 'translateY(-4px) scale(1.08)' : 'translateY(0) scale(1)',
+          transform: hovered ? 'translateY(-3px) scale(1.08)' : 'translateY(0) scale(1)',
           transition: 'transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1)',
         }}
       >
@@ -342,10 +427,15 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
           <img
             src={iconUrl}
             alt={appName}
-            style={{ width: '38px', height: '38px', borderRadius: '8px', objectFit: 'contain' }}
+            style={{
+              width: sizeMode === 'small' ? '26px' : sizeMode === 'medium' ? '30px' : '36px',
+              height: sizeMode === 'small' ? '26px' : sizeMode === 'medium' ? '30px' : '36px',
+              borderRadius: sizeMode === 'small' ? '6px' : '8px',
+              objectFit: 'contain',
+            }}
           />
         ) : (
-          <Layers size={22} color="#FFF" />
+          <Layers size={sizeMode === 'small' ? 17 : sizeMode === 'medium' ? 20 : 22} color="#FFF" />
         )}
 
         {/* Badge Profil Chrome */}
@@ -357,10 +447,10 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
               right: '1px',
               background: accentColor,
               color: '#090D16',
-              fontSize: '8px',
+              fontSize: sizeMode === 'small' ? '7px' : '8px',
               fontWeight: 800,
-              padding: '1px 4px',
-              borderRadius: '5px',
+              padding: '1px 3px',
+              borderRadius: '4px',
               boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
             }}
           >
@@ -371,13 +461,13 @@ export const DockIconWithPreview: React.FC<DockAppPreviewProps> = ({
 
       {/* Indikator Titik Dinamis Berdasarkan Jumlah Jendela Aktif */}
       {windows.length > 0 && (
-        <div style={{ display: 'flex', gap: '3px', marginTop: '2px' }}>
+        <div style={{ display: 'flex', gap: sizeMode === 'small' ? '2px' : '3px', marginTop: '1px' }}>
           {windows.slice(0, 3).map((w) => (
             <span
               key={w.hwnd}
               style={{
-                width: windows.length === 1 ? '10px' : '4px',
-                height: '3px',
+                width: windows.length === 1 ? (sizeMode === 'small' ? '8px' : '10px') : (sizeMode === 'small' ? '3px' : '4px'),
+                height: sizeMode === 'small' ? '2px' : '3px',
                 borderRadius: '2px',
                 background: accentColor,
               }}

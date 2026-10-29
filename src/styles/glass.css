@@ -120,13 +120,61 @@
 .segmented-dock-container {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  /* 10px transparent gap between segments */
-  pointer-events: auto;
+  gap: var(--dock-gap, 8px);
+  pointer-events: none;
   user-select: none;
   overflow: visible;
   width: max-content;
   max-width: 100%;
+}
+
+/* 1. Mode Kecil (Small - Khusus Layar Laptop & Resolusi Rendah <= 800px) */
+.segmented-dock-container.size-small {
+  --dock-bar-height: 44px;
+  --dock-start-size: 40px;
+  --dock-tile-size: 34px;
+  --dock-icon-size: 26px;
+  --dock-tool-size: 24px;
+  --dock-tool-icon-size: 13px;
+  --dock-tray-gap: 8px;
+  --dock-tray-pad: 4px 10px;
+  --dock-apps-pad: 4px 10px;
+  --dock-apps-gap: 4px;
+  --dock-gap: 6px;
+}
+
+/* 2. Mode Sedang (Medium - Standar Seimbang 1080p) */
+.segmented-dock-container.size-medium {
+  --dock-bar-height: 52px;
+  --dock-start-size: 46px;
+  --dock-tile-size: 38px;
+  --dock-icon-size: 30px;
+  --dock-tool-size: 28px;
+  --dock-tool-icon-size: 15px;
+  --dock-tray-gap: 10px;
+  --dock-tray-pad: 5px 12px;
+  --dock-apps-pad: 5px 12px;
+  --dock-apps-gap: 6px;
+  --dock-gap: 8px;
+}
+
+/* 3. Mode Besar (Large - Monitor 2K / 4K) */
+.segmented-dock-container.size-large {
+  --dock-bar-height: 60px;
+  --dock-start-size: 52px;
+  --dock-tile-size: 44px;
+  --dock-icon-size: 36px;
+  --dock-tool-size: 32px;
+  --dock-tool-icon-size: 17px;
+  --dock-tray-gap: 12px;
+  --dock-tray-pad: 8px 16px;
+  --dock-apps-pad: 8px 14px;
+  --dock-apps-gap: 8px;
+  --dock-gap: 10px;
+}
+
+.segmented-dock-container > * {
+  pointer-events: auto;
 }
 
 /* Common Segment Styling */
@@ -148,11 +196,11 @@
   transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 240ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 240ms ease;
 }
 
-/* 1. Start Button Island (52x52) */
+/* 1. Start Button Island */
 .glass-segment-start {
   position: relative;
-  width: 52px;
-  height: 52px;
+  width: var(--dock-start-size, 46px);
+  height: var(--dock-start-size, 46px);
   border-radius: var(--r-tile);
   background: var(--tint-start);
   display: flex;
@@ -176,26 +224,26 @@
   transform: scale(0.94);
 }
 
-/* 2. Main Apps & Tools Island (Height 60px) */
+/* 2. Main Apps & Tools Island */
 .glass-segment-apps {
-  height: 60px;
-  padding: 8px 14px;
+  height: var(--dock-bar-height, 52px);
+  padding: var(--dock-apps-pad, 5px 12px);
   background: linear-gradient(90deg, var(--tint-apps) 0%, var(--tint-info) 65%, var(--tint-notify) 100%);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--dock-apps-gap, 6px);
   width: max-content;
   overflow: visible;
 }
 
-/* 3. System Tray Island (Height 60px) */
+/* 3. System Tray Island */
 .glass-segment-system {
-  height: 60px;
-  padding: 8px 16px;
+  height: var(--dock-bar-height, 52px);
+  padding: var(--dock-tray-pad, 5px 12px);
   background: var(--tint-system);
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--dock-tray-gap, 10px);
   width: max-content;
 }
 
@@ -248,8 +296,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 52px;
-  height: 52px;
+  width: var(--dock-tile-size, 38px);
+  height: var(--dock-tile-size, 38px);
   border-radius: 50%;
   transform: translate(-50%, -50%);
   filter: blur(12px);
@@ -289,9 +337,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: var(--dock-tool-size, 28px);
+  height: var(--dock-tool-size, 28px);
+  border-radius: 6px;
   color: var(--text-primary);
   cursor: pointer;
   position: relative;
@@ -326,4 +374,21 @@
 .notification-capsule:hover {
   background: rgba(255, 255, 255, 0.24);
   transform: translateY(-1px);
+}
+
+/* Dock Window Preview Card (Smooth entrance, no flicker) */
+@keyframes dockPreviewFadeIn {
+  from {
+    opacity: 0;
+    transform: translate3d(-50%, 6px, 0) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(-50%, 0, 0) scale(1);
+  }
+}
+
+.dock-preview-card {
+  animation: dockPreviewFadeIn 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
 }

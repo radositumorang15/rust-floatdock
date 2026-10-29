@@ -7,7 +7,7 @@ use once_cell::sync::Lazy;
 #[cfg(windows)]
 use windows::Win32::{
     Media::Audio::{
-        eConsole, eRender, Endpoints::IAudioMeterInformation, IMMDeviceEnumerator,
+        eConsole, eMultimedia, eRender, Endpoints::IAudioMeterInformation, IMMDeviceEnumerator,
         MMDeviceEnumerator,
     },
     System::{
@@ -68,7 +68,10 @@ pub fn poll_hardware_and_audio() -> HardwareAudioState {
 
         // 1. Baca Real-Time Audio Peak & ID Perangkat Output (Speaker/Bluetooth)
         if let Ok(enumerator) = CoCreateInstance::<_, IMMDeviceEnumerator>(&MMDeviceEnumerator, None, CLSCTX_ALL) {
-            if let Ok(device) = enumerator.GetDefaultAudioEndpoint(eRender, eConsole) {
+            let endpoint = enumerator
+                .GetDefaultAudioEndpoint(eRender, eMultimedia)
+                .or_else(|_| enumerator.GetDefaultAudioEndpoint(eRender, eConsole));
+            if let Ok(device) = endpoint {
                 if let Ok(id_pwstr) = device.GetId() {
                     let id_str = id_pwstr.to_string().unwrap_or_default();
                     if !id_str.is_empty() {

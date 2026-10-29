@@ -345,6 +345,15 @@ export const Notch: React.FC<NotchProps> = ({ timer, media, theme, onTogglePlayb
     if (media) setLiveMedia(media);
   }, [media]);
 
+  // Query status media awal saat mount agar Notch langsung menampilkan musik yang sedang aktif
+  useEffect(() => {
+    invoke<MediaState>('get_media_state')
+      .then((m) => {
+        if (m && m.has_media) setLiveMedia(m);
+      })
+      .catch(() => {});
+  }, []);
+
   useTauriEvent<MediaState>('media-updated', (m) => {
     if (m) setLiveMedia(m);
   });

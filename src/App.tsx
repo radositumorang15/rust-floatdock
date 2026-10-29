@@ -488,7 +488,7 @@ export const App: React.FC = () => {
           display: 'flex',
           alignItems: 'flex-end',
           justifyContent: 'center',
-          paddingBottom: '14px',
+          paddingBottom: '8px',
           pointerEvents: 'none',
           background: 'transparent',
         }}

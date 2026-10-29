@@ -17,6 +17,7 @@ interface TrayProps {
   volume: VolumeInfo;
   network: NetworkInfo;
   weather?: WeatherInfo;
+  sizeMode?: 'small' | 'medium' | 'large';
   onOpenNetwork: () => void;
   onStepVolume: (delta: number) => void;
   onToggleMute: () => void;
@@ -27,6 +28,7 @@ export const TrayArea: React.FC<TrayProps> = ({
   battery,
   volume,
   network,
+  sizeMode = 'medium',
   onOpenNetwork,
   onStepVolume,
   onToggleMute,
@@ -65,12 +67,19 @@ export const TrayArea: React.FC<TrayProps> = ({
     }
   };
 
+  const iconSize = sizeMode === 'small' ? 13 : sizeMode === 'medium' ? 15 : 16;
+  const timeFontSize = sizeMode === 'small' ? '10.5px' : sizeMode === 'medium' ? '11.5px' : '12px';
+  const dateFontSize = sizeMode === 'small' ? '8.5px' : sizeMode === 'medium' ? '9.5px' : '10.5px';
+  const langFontSize = sizeMode === 'small' ? '9.5px' : sizeMode === 'medium' ? '10.5px' : '11px';
+  const dividerHeight = sizeMode === 'small' ? '16px' : sizeMode === 'medium' ? '19px' : '22px';
+  const trayGap = sizeMode === 'small' ? '8px' : sizeMode === 'medium' ? '10px' : '12px';
+
   return (
     <div
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '12px',
+        gap: trayGap,
         userSelect: 'none',
       }}
     >
@@ -80,7 +89,7 @@ export const TrayArea: React.FC<TrayProps> = ({
           onClick={onOpenNetwork}
           style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', color: 'var(--text-primary)' }}
         >
-          {battery.is_charging ? <BatteryCharging size={16} /> : <Battery size={16} />}
+          {battery.is_charging ? <BatteryCharging size={iconSize} /> : <Battery size={iconSize} />}
         </div>
       </Tooltip>
 
@@ -104,7 +113,7 @@ export const TrayArea: React.FC<TrayProps> = ({
             color: volume.is_muted ? 'var(--danger)' : 'var(--text-primary)',
           }}
         >
-          {volume.is_muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          {volume.is_muted ? <VolumeX size={iconSize} /> : <Volume2 size={iconSize} />}
         </div>
       </Tooltip>
 
@@ -119,7 +128,7 @@ export const TrayArea: React.FC<TrayProps> = ({
             color: network.is_connected ? 'var(--text-primary)' : 'rgba(255,255,255,0.4)',
           }}
         >
-          {network.is_connected ? <Wifi size={16} /> : <WifiOff size={16} />}
+          {network.is_connected ? <Wifi size={iconSize} /> : <WifiOff size={iconSize} />}
         </div>
       </Tooltip>
 
@@ -133,17 +142,17 @@ export const TrayArea: React.FC<TrayProps> = ({
             color: 'var(--text-secondary)',
           }}
         >
-          <MoreHorizontal size={16} />
+          <MoreHorizontal size={iconSize} />
         </div>
       </Tooltip>
 
       {/* 5. Vertical Thin Glass Divider */}
-      <div style={{ width: '1px', height: '22px', background: 'rgba(255, 255, 255, 0.25)' }} />
+      <div style={{ width: '1px', height: dividerHeight, background: 'rgba(255, 255, 255, 0.25)' }} />
 
       {/* 6. Language Indicator (ENG) */}
       <div
         style={{
-          fontSize: '11px',
+          fontSize: langFontSize,
           fontWeight: 700,
           color: 'var(--text-primary)',
           letterSpacing: '0.5px',
@@ -170,10 +179,10 @@ export const TrayArea: React.FC<TrayProps> = ({
             lineHeight: 1.15,
           }}
         >
-          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>
+          <span style={{ fontSize: timeFontSize, fontWeight: 700, color: 'var(--text-primary)' }}>
             {timeStr}
           </span>
-          <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-secondary)' }}>
+          <span style={{ fontSize: dateFontSize, fontWeight: 500, color: 'var(--text-secondary)' }}>
             {dateStr}
           </span>
         </div>

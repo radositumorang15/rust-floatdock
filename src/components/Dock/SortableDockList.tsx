@@ -19,6 +19,7 @@ interface SortableDockListProps {
   items: DockItemData[];
   theme?: ThemeConfig;
   accentColor?: string;
+  sizeMode?: 'small' | 'medium' | 'large';
   onFocusWindow: (hwnd: number) => void;
   onCloseWindow: (hwnd: number) => void;
   onLaunchApp: (item: DockItemData) => void;
@@ -33,8 +34,11 @@ const DockIconImage: React.FC<{
   iconUrl?: string;
   iconName: string;
   theme?: ThemeConfig;
-}> = ({ name, iconUrl, iconName, theme }) => {
+  sizeMode?: 'small' | 'medium' | 'large';
+}> = ({ name, iconUrl, iconName, theme, sizeMode = 'medium' }) => {
   const [loadError, setLoadError] = useState(false);
+  const px = sizeMode === 'small' ? '26px' : sizeMode === 'medium' ? '30px' : '36px';
+  const iconNum = sizeMode === 'small' ? 26 : sizeMode === 'medium' ? 30 : 36;
 
   if (iconUrl && !loadError) {
     return (
@@ -43,9 +47,9 @@ const DockIconImage: React.FC<{
         alt={name}
         onError={() => setLoadError(true)}
         style={{
-          width: '38px',
-          height: '38px',
-          borderRadius: '8px',
+          width: px,
+          height: px,
+          borderRadius: sizeMode === 'small' ? '6px' : '8px',
           objectFit: 'contain',
           filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.35))',
           pointerEvents: 'none',
@@ -53,28 +57,43 @@ const DockIconImage: React.FC<{
       />
     );
   }
-  return <AppIconRenderer iconName={iconName} size={40} theme={theme} />;
+  return <AppIconRenderer iconName={iconName} size={iconNum} theme={theme} />;
 };
 
 export const SortableDockList: React.FC<SortableDockListProps> = ({
   items,
   theme,
   accentColor = '#38BDF8',
+  sizeMode = 'medium',
   onFocusWindow,
   onCloseWindow,
   onLaunchApp,
   onContextMenu,
   onPreviewHoverChange,
 }) => {
-  const activePreviewRef = useRef<string | null>(null);
+  const [activePreviewId, setActivePreviewId] = useState<string | null>(null);
+  const previewTimerRef = useRef<number | null>(null);
 
   const handlePreviewHover = (id: string, open: boolean) => {
+    if (previewTimerRef.current) {
+      clearTimeout(previewTimerRef.current);
+      previewTimerRef.current = null;
+    }
+
     if (open) {
-      activePreviewRef.current = id;
+      setActivePreviewId(id);
       onPreviewHoverChange?.(true);
-    } else if (activePreviewRef.current === id) {
-      activePreviewRef.current = null;
-      onPreviewHoverChange?.(false);
+    } else {
+      previewTimerRef.current = window.setTimeout(() => {
+        setActivePreviewId((current) => {
+          if (current === id) {
+            onPreviewHoverChange?.(false);
+            return null;
+          }
+          return current;
+        });
+        previewTimerRef.current = null;
+      }, 140);
     }
   };
 
@@ -124,7 +143,7 @@ export const SortableDockList: React.FC<SortableDockListProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: sizeMode === 'small' ? '4px' : sizeMode === 'medium' ? '5px' : '6px' }}>
       {/* 1. DAFTAR APLIKASI PINNED (Bisa di-Reorder dengan Drag & Drop) */}
       {pinnedItems.map((app) => (
         <div
@@ -147,6 +166,8 @@ export const SortableDockList: React.FC<SortableDockListProps> = ({
             profileBadge={app.profileBadge}
             windows={app.windows}
             accentColor={accentColor}
+            sizeMode={sizeMode}
+            isAnyPreviewOpen={Boolean(activePreviewId)}
             onFocusWindow={onFocusWindow}
             onCloseWindow={onCloseWindow}
             onLaunchNewInstance={() => onLaunchApp(app)}
@@ -157,6 +178,7 @@ export const SortableDockList: React.FC<SortableDockListProps> = ({
               iconUrl={app.iconUrl}
               iconName={app.iconName}
               theme={theme}
+              sizeMode={sizeMode}
             />
           </DockIconWithPreview>
         </div>
@@ -167,9 +189,9 @@ export const SortableDockList: React.FC<SortableDockListProps> = ({
         <div
           style={{
             width: '1px',
-            height: '28px',
+            height: sizeMode === 'small' ? '18px' : sizeMode === 'medium' ? '22px' : '26px',
             background: 'rgba(255, 255, 255, 0.22)',
-            margin: '0 4px',
+            margin: sizeMode === 'small' ? '0 2px' : '0 4px',
             borderRadius: '1px',
           }}
         />
@@ -185,6 +207,8 @@ export const SortableDockList: React.FC<SortableDockListProps> = ({
             profileBadge={app.profileBadge}
             windows={app.windows}
             accentColor={accentColor}
+            sizeMode={sizeMode}
+            isAnyPreviewOpen={Boolean(activePreviewId)}
             onFocusWindow={onFocusWindow}
             onCloseWindow={onCloseWindow}
             onLaunchNewInstance={() => onLaunchApp(app)}
@@ -195,6 +219,7 @@ export const SortableDockList: React.FC<SortableDockListProps> = ({
               iconUrl={app.iconUrl}
               iconName={app.iconName}
               theme={theme}
+              sizeMode={sizeMode}
             />
           </DockIconWithPreview>
         </div>

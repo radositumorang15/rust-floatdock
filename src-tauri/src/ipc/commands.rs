@@ -12,7 +12,7 @@ use crate::core::window_tracker::{
 use crate::services::apps_index::{get_all_indexed_apps, get_default_dock_apps, search_apps, AppEntry};
 use crate::services::battery::{get_battery_info, BatteryInfo};
 use crate::services::launcher::{execute_power_action, launch_app as core_launch_app, launch_as_admin as core_launch_admin};
-use crate::services::media::{get_media_state, MediaState};
+use crate::services::media::MediaState;
 use crate::services::network::{get_network_info, open_network_flyout as core_open_network, NetworkInfo};
 use crate::services::timer::{
     get_timer, reset_timer as core_reset_timer, set_timer as core_set_timer,
@@ -48,7 +48,7 @@ pub async fn get_full_dock_state() -> FullDockState {
         volume: get_volume(),
         network: get_network_info(),
         timer: get_timer(),
-        media: get_media_state().await,
+        media: crate::services::media::get_media_state().await,
         weather: core_get_weather(None, None).await,
     }
 }
@@ -175,20 +175,42 @@ pub fn resize_notch(app: AppHandle, width: f64, height: f64) {
 }
 
 #[tauri::command]
-pub fn resize_dock(app: AppHandle, expanded: bool, hidden: bool) {
+pub fn resize_dock(
+    app: AppHandle,
+    width: Option<f64>,
+    height: Option<f64>,
+    expanded: bool,
+    hidden: bool,
+) {
     if let Some(window) = app.get_webview_window("dock") {
-        if hidden {
-            let _ = window.set_ignore_cursor_events(true);
-        } else {
-            let _ = window.set_ignore_cursor_events(false);
-            let h = if expanded {
+        let w = width.unwrap_or_else(|| {
+            if expanded {
+                880.0
+            } else {
+                crate::windows::dock::DOCK_DEFAULT_WIDTH
+            }
+        });
+        let h = height.unwrap_or_else(|| {
+            if expanded {
                 crate::windows::dock::DOCK_EXPANDED_HEIGHT
             } else {
                 crate::windows::dock::DOCK_IDLE_HEIGHT
-            };
-            crate::windows::dock::reposition_dock(&window, h);
+            }
+        });
+
+        if hidden {
+            let _ = window.set_ignore_cursor_events(true);
+            crate::windows::dock::reposition_dock(&window, w, h);
+        } else {
+            let _ = window.set_ignore_cursor_events(false);
+            crate::windows::dock::reposition_dock(&window, w, h);
         }
     }
+}
+
+#[tauri::command]
+pub async fn get_media_state() -> MediaState {
+    crate::services::media::get_media_state().await
 }
 
 #[tauri::command]
