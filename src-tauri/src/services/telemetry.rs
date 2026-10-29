@@ -42,6 +42,7 @@ static LAST_CPU: Lazy<Mutex<CpuTimes>> = Lazy::new(|| {
 
 static CLIPBOARD_HISTORY: Lazy<Mutex<Vec<String>>> = Lazy::new(|| Mutex::new(Vec::new()));
 static LAST_SEQ: once_cell::sync::Lazy<std::sync::atomic::AtomicU32> = once_cell::sync::Lazy::new(|| std::sync::atomic::AtomicU32::new(0));
+static CPU_EMA: Lazy<Mutex<f32>> = Lazy::new(|| Mutex::new(0.0));
 
 #[cfg(windows)]
 fn filetime_to_u64(ft: FILETIME) -> u64 {
@@ -77,7 +78,13 @@ pub fn sample_cpu_and_ram() -> (f32, f32) {
                 let total_sys = d_kernel + d_user;
 
                 if total_sys > 0 {
-                    cpu_usage = ((total_sys.saturating_sub(d_idle)) as f32 / total_sys as f32) * 100.0;
+                    let raw_cpu = ((total_sys.saturating_sub(d_idle)) as f32 / total_sys as f32) * 100.0;
+                    if let Ok(mut ema) = CPU_EMA.lock() {
+                        *ema = (*ema * 0.82) + (raw_cpu.clamp(0.0, 100.0) * 0.18);
+                        cpu_usage = *ema;
+                    } else {
+                        cpu_usage = raw_cpu;
+                    }
                 }
                 *prev = CpuTimes { idle: idle_u, kernel: kernel_u, user: user_u };
             }

@@ -381,16 +381,22 @@ export const Notch: React.FC<NotchProps> = ({ timer, media, theme, onTogglePlayb
   });
 
   // Toast alert hardware (charger, baterai, bluetooth)
-  const lastToastRef = useRef<string | null>(null);
+  const lastToastRef = useRef<{ text: string; time: number } | null>(null);
   const toastTimerRef = useRef<number | null>(null);
   useTauriEvent<HardwareAudioState>('hardware-audio', (hw) => {
-    const t = hw.hardware_toast ?? null;
-    if (t && t !== lastToastRef.current) {
-      setToastMsg(t);
-      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-      toastTimerRef.current = window.setTimeout(() => setToastMsg(null), 3200);
+    const t = hw?.hardware_toast?.trim() ?? null;
+    if (!t) return;
+
+    const now = Date.now();
+    // Cegah kemunculan pesan yang sama jika baru saja ditampilkan dalam 5 detik
+    if (lastToastRef.current && lastToastRef.current.text === t && now - lastToastRef.current.time < 5000) {
+      return;
     }
-    lastToastRef.current = t;
+
+    lastToastRef.current = { text: t, time: now };
+    setToastMsg(t);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setToastMsg(null), 3200);
   });
 
   // Alert timer selesai (auto-dismiss 7 detik & click-to-dismiss)
@@ -570,9 +576,10 @@ export const Notch: React.FC<NotchProps> = ({ timer, media, theme, onTogglePlayb
 
   const accentColor = theme?.accent || '#38BDF8';
   const isPlaying = Boolean(liveMedia?.has_media && liveMedia?.is_playing);
-  const isOverloaded = pulse.cpu_usage > 85 || pulse.ram_usage > 88;
+  const isOverloaded = pulse.cpu_usage > 92 || pulse.ram_usage > 94;
   const timerRunning = SHOW_TIMER && Boolean(timer?.is_running && !timer?.is_finished);
-  const hasActivity = isPlaying || timerRunning || shelfFiles.length > 0 || isOverloaded;
+  // Beban CPU/RAM tinggi TIDAK boleh mengubah lebar Notch idle agar tidak terjadi flickering/glitch
+  const hasActivity = isPlaying || timerRunning || shelfFiles.length > 0;
   const mood: Mood = isOverloaded ? 'alert' : isPlaying ? 'happy' : isLateNight ? 'sleepy' : 'normal';
 
   const view: View = toastMsg
@@ -738,7 +745,7 @@ export const Notch: React.FC<NotchProps> = ({ timer, media, theme, onTogglePlayb
                       background: 'color-mix(in srgb, var(--nx-accent) 16%, transparent)',
                     }}
                   >
-                    <Zap size={10} /> Beban tinggi
+                    <Cpu size={10} /> Beban tinggi
                   </span>
                 )}
               </div>
@@ -1045,7 +1052,7 @@ export const Notch: React.FC<NotchProps> = ({ timer, media, theme, onTogglePlayb
             <Eyes cursorRef={cursorRef} mood={mood} />
 
             <div style={{ justifySelf: 'end', display: 'flex', alignItems: 'center' }}>
-              {isPlaying ? <AudioBars /> : isOverloaded ? <Zap size={12} color={accentColor} /> : null}
+              {isPlaying ? <AudioBars /> : null}
             </div>
           </div>
         )}

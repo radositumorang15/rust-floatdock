@@ -207,6 +207,7 @@ export const App: React.FC = () => {
           sameWindows &&
           sameMedia &&
           prev.battery.percentage === state.battery.percentage &&
+          prev.battery.is_charging === state.battery.is_charging &&
           prev.volume.level === state.volume.level &&
           prev.network.is_connected === state.network.is_connected
         ) {
