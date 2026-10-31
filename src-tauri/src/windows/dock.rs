@@ -8,7 +8,7 @@ use super::{make_hwnd_transparent, strip_window_decorations};
 
 pub const DOCK_DEFAULT_WIDTH: f64 = 760.0;
 pub const DOCK_IDLE_HEIGHT: f64 = 76.0;
-pub const DOCK_EXPANDED_HEIGHT: f64 = 220.0;
+pub const DOCK_EXPANDED_HEIGHT: f64 = 380.0;
 pub const DOCK_BAR_HEIGHT: f64 = 60.0;
 pub const DOCK_BOTTOM_OFFSET: f64 = 14.0;
 

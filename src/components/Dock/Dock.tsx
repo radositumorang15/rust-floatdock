@@ -401,9 +401,9 @@ export const Dock: React.FC<DockProps> = ({
 
 
   useEffect(() => {
-    // Ukuran expanded yang kompak & proporsional sesuai kartu preview (TIDAK memakan setengah layar!)
-    const expandedHeight = effectiveSize === 'small' ? 190 : effectiveSize === 'medium' ? 230 : 270;
-    const extraWidth = effectiveSize === 'small' ? 80 : 140;
+    // Ukuran expanded yang lega agar kartu preview overlay tampil penuh tanpa terpotong
+    const expandedHeight = effectiveSize === 'small' ? 320 : effectiveSize === 'medium' ? 380 : 420;
+    const extraWidth = effectiveSize === 'small' ? 140 : 200;
     const targetW = isExpanded ? dockWidth + extraWidth : dockWidth + 20;
     const targetH = isExpanded ? expandedHeight : idleHeight;
 
